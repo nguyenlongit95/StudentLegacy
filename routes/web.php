@@ -5,7 +5,6 @@
 Route::get('/', function () {
     return view('welcome');
 });
-
 /*
  * khởi tạo ban đầu cho tài khoản
  * Khi hoàn thành sẽ xóa phần Route này đi
@@ -316,6 +315,7 @@ Route::group(['prefix'=>'admin','middleware' => ['auth','role:BACKEND']],functio
 /*
  * Route cho phia client
  * */
+Route::resource('student','StudentController');
 
 Route::get('createCart','adminController@createCart');
 

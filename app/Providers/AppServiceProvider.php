@@ -116,6 +116,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Email\CUrrencyCodeEloquentRepository::class
         );
         $this->app->bind(
+            \App\Repositories\Subject\SubjectEloquentRespository::class,
+            \App\Repositories\Subject\SubjectRepositoryInterface::class
+        );
+        $this->app->bind(
             \App\Factory\Paygates\PaygateFactory::class
         );
     }

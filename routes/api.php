@@ -25,3 +25,9 @@ Route::post('register','UserController@register');
 Route::group(['middleware'=>'auth:api'], function(){
     Route::post('details','UserController@details');
 });
+
+Route::group(['prefix'=>'v1'], function () {
+    Route::post('login','StudentController@loginStudent');
+    Route::post('store','SubjectController@store');
+    Route::get('show','SubjectController@show');
+});

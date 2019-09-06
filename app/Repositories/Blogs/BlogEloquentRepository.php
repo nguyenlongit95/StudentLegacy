@@ -26,6 +26,7 @@ class BlogEloquentRepository extends EloquentRepository implements BlogRepositor
     public function Search($keySearch){
 
     }
+
     public function deleteImageBlog($id)
     {
         // TODO: Implement deleteImageBlog() method.
@@ -43,6 +44,7 @@ class BlogEloquentRepository extends EloquentRepository implements BlogRepositor
             return 2;
         }
     }
+    
     public function insertImage($id, $Image)
     {
         // TODO: Implement insertImage() method.
