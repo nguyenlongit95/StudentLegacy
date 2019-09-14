@@ -9,16 +9,6 @@ use Carbon\Carbon;
 class StudentController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\Response
@@ -47,7 +37,14 @@ class StudentController extends Controller
      */
     public function show($id)
     {
-        //
+        $student = Student::find($id);
+        $listFriend = $student->friends;
+        
+        if (!$student) {
+            return response()->json(["message"=>"data not found"], 404 );
+        }
+
+        return response()->json($student, 200);
     }
 
     /**
@@ -70,7 +67,28 @@ class StudentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        // validate du lieu
+        if (!$request->friends) {
+            return response()->json(["message"=>"Please enter a id of friend"], 400);
+        }
+        
+        $student = Student::find($id);
+
+        if (!$student) {
+            return response()->json(["message"=>"Data not found"], 422);
+        }
+
+        $listFriend = json_decode($student->friends);
+        array_push($listFriend, ["id"=>$request->friends]);
+        $encodeFriend = json_encode($listFriend);
+        $student->friends = $encodeFriend;
+
+        try { 
+            $student->save();
+            return response()->json($student, 200);
+        } catch (\Exception $exception) {
+            return response()->json(["message"=>"DB Errors"], 500);
+        }
     }
 
     /**
@@ -83,6 +101,189 @@ class StudentController extends Controller
     {
         //
     }
+
+    /**
+     * Function store friends request
+     *  Param: idStudent, idFriend
+     *
+     * @return messsage
+     */
+    public function storeFriendRequest(Request $request) 
+    {
+        if (!$request->idStudent) {
+            return response()->json(["message"=>"Please enter idStudent"], 400);
+        }
+
+        if (!$request->idFriend) {
+            return response()->json(["message"=>"Please enter idFriend"], 400);
+        }
+
+        $student = Student::find($request->idStudent);
+
+        if (!$student) {
+            return response()->json(["Student not found"], 422);
+        }
+
+        $friend = Student::find($request->idFriend);
+
+        if (!$friend) {
+            return response()->json(["message"=>"Friend not"], 422);
+        }
+
+        $friendsRequest = json_decode($student->friends_requested);
+
+        array_push($friendsRequest, $request->idFriend);
+
+        $student->friends_requested = json_encode($friendsRequest);
+
+        try {
+            $student->save();
+            return response()->json($student, 200);
+        } catch (\Exception $exception) {
+            return response()->json(["message"=>"Systems Errors"], 500);
+        }
+    }
+
+    /**
+     * Function confirm the request friend
+     *  Param: idStudent, idFriend, confirm
+     *
+     * @return messsage
+     */
+    public function confirmFriendRequest(Request $request) {
+        if (!$request->idStudent) {
+            return response()->json(["message"=>"Please enter idStudent"], 400);
+        }
+
+        if (!$request->idFriend) {
+            return response()->json(["message"=>"Please enter idFriend"], 400);
+        }
+
+        if (!$request->confirm) {
+            return response()->json(["message"=>"Please enter confirm"], 400);
+        }
+
+        $student = Student::find($request->idStudent);
+
+        if (!$student) {
+            return response()->json(["Student not found"], 422);
+        }
+
+        $friend = Student::find($request->idFriend);
+
+        if (!$friend) {
+            return response()->json(["message"=>"Friend not found"], 422);
+        }
+
+        $friendsRequest = json_decode($student->friends_requested, true);
+
+        $haveRequest = in_array($request->idFriend, $friendsRequest);
+
+        if (!$haveRequest) {
+            return response()->json(["message"=>"request friend not found"], 422);
+        }
+
+        if ($request->confirm == 1) {
+            $this->storeFriend($student, $request->idFriend);
+            $this->storeFriend($friend, $request->idStudent);
+        }
+        //delete request
+        // return $friendsRequest;
+        $idFriend = $request->idFriend;
+        $newFriendsRequest = array_filter($friendsRequest, function ($value) use ($idFriend) {
+            return $value != $idFriend;
+        });
+        $student->friends_requested = json_encode($newFriendsRequest);
+        try {
+            $student->save();
+            return response()->json($student, 200);
+        } catch (\Exception $exception) {
+            return response()->json(["message"=>"Systems errors"], 500);
+        }
+    }
+
+    /**
+     * Function store friend
+     *  Param: idStudent, idFriend
+     *
+     * @return message
+     */
+    public function storeFriend(Student $student, $idFriend) {
+        $friends = json_decode($student->friends, true);
+        $isFriend = in_array(["id"=>$idFriend], $friends);
+        if (!$isFriend) {
+            array_push($friends, ["id"=>$idFriend]);
+            $student->friends = json_encode($friends);
+
+            try {
+                $student->save();
+            } catch (\Exception $exception) {
+                return response()->json(["message"=>"System Errors"], 500);
+            }
+        }
+    }
+
+    /**
+     * Function get information of self student
+     *  Param: id
+     *
+     * @return Student
+     */
+    public function getInfoStudent($id)
+    {
+        if (!$id) {
+            return response()->json(["message"=>"Please enter id of student"], 400);
+        }
+
+        $student = Student::find($id);
+
+        if (!$student) {
+            return response()->json(["message"=>"Data not found"], 422);
+        }
+
+        return response()->json($student, 200);
+    }
+
+    /**
+     * Function get information of student'friends
+     *  Param: id
+     *
+     * @return id, username, avatar, mail, gender, description
+     */
+    public function getInfoFriend($idStudent, $idFriend)
+    {
+        if (!$idStudent) {
+            return response()->json(["message"=>"Please enter id of student"], 400);
+        }
+
+        $student = Student::find($idStudent);
+
+        if (!$student) {
+            return response()->json(["message"=>"student not found"], 422);
+        }
+
+        if (!$idFriend) {
+            return response()->json(["message"=>"Please enter id of friend"], 400);
+        }
+
+        $friendSearch = Student::find($idFriend);
+
+        if (!$friendSearch) {
+            return response()->json(["message"=>"Friend not found"], 422);
+        }
+
+        //Check relationship
+        $friends = json_decode($student->friends, true);
+        $isFriend = in_array(["id"=>$idFriend], $friends);
+                
+        return response()->json(["id"=>$student->id,
+                                 "username"=>$student->username,
+                                 "avatar"=>$student->avatar,
+                                 "mail"=>$student->email,
+                                 "gender"=>$student->gender,
+                                 "description"=>$student->description,
+                                 "isFriend"=>$isFriend], 200);
+    }    
 
     /**
      * Function login for student

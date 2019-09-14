@@ -91,22 +91,22 @@ Route::group(['prefix'=>'admin','middleware' => ['auth','role:BACKEND']],functio
     });
 
     Route::group(['prefix'=>'Blog'],function(){
-        Route::get('Blogs','BlogController@index');
+        Route::get('Blogs','BlogsController@index');
 
-        Route::get('addBlogs','BlogController@getAddBlogs');
-        Route::post('addBlogs','BlogController@store');
+        Route::get('addBlogs','BlogsController@getAddBlogs');
+        Route::post('addBlogs','BlogsController@store');
 
-        Route::get('updateBlog/{id}','BlogController@getUpdateBlogs');
-        Route::post('updateBlogs/{id}','BlogController@update');
+        Route::get('updateBlog/{id}','BlogsController@getUpdateBlogs');
+        Route::post('updateBlogs/{id}','BlogsController@update');
 
-        Route::post('changeImageBlogs/{id}','BlogController@changeImage');
+        Route::post('changeImageBlogs/{id}','BlogsController@changeImage');
 //        Route::post('changeImageBlogs/{id}',function(){
 //            dd("abcabc");
 //        });
 
-        Route::get('deleteBlog/{id}','BlogController@destroy');
+        Route::get('deleteBlog/{id}','BlogsController@destroy');
 
-        Route::post('ajaxSlug','BlogController@ajaxSlug');
+        Route::post('ajaxSlug','BlogsController@ajaxSlug');
     });
 
     Route::group(['prefix'=>'Order'],function(){
@@ -161,17 +161,17 @@ Route::group(['prefix'=>'admin','middleware' => ['auth','role:BACKEND']],functio
      * API
      * */
     Route::group(['prefix'=>'Comment'],function(){
-        Route::get('Comments','CommentController@index');
+        Route::get('Comments','CommentsController@index');
 
-        Route::get('Comments/{id}','CommentController@getDetails');
-        Route::get('updateComment/{id}','CommentController@getUpdate');
-        Route::post('updateComment/{id}','CommentController@update');
-        //Route::post('updateComment/{id}','CommentController@updateState');
+        Route::get('Comments/{id}','CommentsController@getDetails');
+        Route::get('updateComment/{id}','CommentsController@getUpdate');
+        Route::post('updateComment/{id}','CommentsController@update');
+        //Route::post('updateComment/{id}','CommentsController@updateState');
 
-        Route::get('deleteComment/{id}','CommentController@destroy');
+        Route::get('deleteComment/{id}','CommentsController@destroy');
 
-        Route::get('addComment/{id}','CommentController@getStore');
-        Route::post('addReplyComment/{id}','CommentController@adminReply');
+        Route::get('addComment/{id}','CommentsController@getStore');
+        Route::post('addReplyComment/{id}','CommentsController@adminReply');
     });
 
     Route::group(['prefix'=>'Contact'],function(){

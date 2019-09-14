@@ -3,99 +3,331 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Repositories\Comments\CommentRepositoryInterface;
-use App\Repositories\Users\UsersRepositoryInterface;
-use App\Repositories\Blogs\BlogRepositoryInterface;
+use App\Comment;
+use App\Blog;
+use App\Student;
+use Carbon\Carbon;
+
 class CommentController extends Controller
 {
-    protected $CommentRepository;
-    protected $UserRepository;
-    protected $BlogRepository;
-
-    public function __construct(
-        CommentRepositoryInterface $commentReporitory,
-        UsersRepositoryInterface $userRepository,
-        BlogRepositoryInterface $blogReporitory
-    )
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
     {
-        $this->CommentRepository = $commentReporitory;
-        $this->UserRepository = $userRepository;
-        $this->BlogRepository = $blogReporitory;
+        //
     }
 
-    public function index(){
-        $Comments = $this->CommentRepository->getAll(30);
-        return view('admin.Comments.index', ['Comment'=>$Comments]);
-    }
+    /**
+     * Store a newly comment in DB.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeComment(Request $request)
+    {
+        if (!$request->owner_id) {
+            return response()->json(["message"=>"comment's owner id is null"], 400);
+        }
 
-    public function show($id){
-        $Comments = $this->CommentRepository->find($id);
-        return $Comments;
-    }
+        if (!$request->content) {
+            return response()->json(["message"=>"comment's content is null"], 400);
+        }
 
-    public function getStore($id){
-        $Parent_id = $this->getParentID($id);
-        $Comment = $this->CommentRepository->find($id);
-        return view('admin.Comments.create',['Parent_id'=>$Parent_id,"Comment"=>$Comment,"id"=>$id]);
-    }
+        if (!$request->blog_id) {
+            return response()->json(["message"=>"comment's blog id is null"], 400);
+        }
 
-    public function store(Request $request,$id){
-        $data = $request->all();
-        $Comments = $this->CommentRepository->create($data);
+        $blog = Blog::find($request->blog_id);
+        if (!$blog) {
+            return response()->json(["message"=>"Blog include this cmt not found"], 422);
+        }
 
-        if($Comments == true){
-            return redirect('admin/Categories/CategoriesBlog')->with('thong_bao','Add new item success');
-        }else{
-            return redirect()->back()->with('thong_bao','Add new item failed');
+        // Create new comment to insert into DB
+        $comment = new Comment;
+        $comment->owner_id = $request->owner_id;
+        
+        if (!$request->friends_tag) {
+            $comment->friends_tag = "[]";
+        } else {
+            $comment->friends_tag = $request->friends_tag;
+        }
+
+        if (!$request->status) {
+            $comment->status = null;
+        } else {
+            $comment->status = $request->status;
+        }
+
+        $comment->content = $request->content;
+
+        if (!$request->images_enclose) {
+            $comment->images_enclose = "[]";
+        } else {
+            $comment->images_enclose = $request->images_enclose;
+        }
+
+        if (!$request->liked) {
+            $comment->liked = "[]";
+        } else {
+            $comment->liked = $request->liked;
+        }
+
+        if (!$request->replies) {
+            $comment->replies = "[]";
+        } else {
+            $comment->replies = $request->replies;
+        }
+
+        $comment->created_at = Carbon::now();
+        $comment_updated_at = Carbon::now();
+
+        try {
+            $comment->save();
+            $idComment = $comment->id;
+            $comments = json_decode($blog->comments);
+            // return $comments;
+            array_push($comments, $idComment);
+            $blog->comments = json_encode($comments);
+            $blog->save();
+
+            return response()->json(["comment"=>$comment, "blog"=> $blog], 200);
+        } catch (\Exception $exception) {
+            return reponse()->json(["message"=>"System Errors"], 500);
         }
     }
 
-    public function update(Request $request, $id){
-        $data = $request->all();
-        $Comments = $this->CommentRepository->update($data,$id);
-        if($Comments == true){
-            return redirect()->back()->with('thong_bao','Update an item success!');
-        }else{
-            return redirect()->back()->with('thong_bao','Update an item failed!');
+    /**
+     * Store a newly reply comment into DB.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeReplyComment(Request $request)
+    {
+        if (!$request->owner_id) {
+            return response()->json(["message"=>"comment's owner id is null"], 400);
+        }
+
+        if (!$request->content) {
+            return response()->json(["message"=>"comment's content is null"], 400);
+        }
+
+        if (!$request->parent_cmt_id) {
+            return response()->json(["message"=>" id parent of comment is null"], 400);
+        }
+
+        $parentComment = Comment::find($request->parent_cmt_id);
+
+        if (!$parentComment) {
+            return response()->json(["message"=>"Parent comment not found"],422);
+        }
+
+        // Create new reply comment to insert into DB
+        $comment = new Comment;
+        $comment->owner_id = $request->owner_id;
+        
+        if (!$request->friends_tag) {
+            $comment->friends_tag = "[]";
+        } else {
+            $comment->friends_tag = $request->friends_tag;
+        }
+
+        if (!$request->status) {
+            $comment->status = null;
+        } else {
+            $comment->status = $request->status;
+        }
+
+        $comment->content = $request->content;
+
+        if (!$request->images_enclose) {
+            $comment->images_enclose = "[]";
+        } else {
+            $comment->images_enclose = $request->images_enclose;
+        }
+
+        if (!$request->liked) {
+            $comment->liked = "[]";
+        } else {
+            $comment->liked = $request->liked;
+        }
+
+        if (!$request->replies) {
+            $comment->replies = "[]";
+        } else {
+            $comment->replies = $request->replies;
+        }
+
+        $comment->created_at = Carbon::now();
+        $comment_updated_at = Carbon::now();
+
+        try {
+            $comment->save();
+
+            //change replies of comment's parent
+            $idComment = $comment->id;
+            $replies = json_decode($parentComment->replies, true);
+            array_push($replies, $idComment);
+            $parentComment->replies = json_encode($replies);
+            $parentComment->save();
+            return response()->json($comment, 200);
+        } catch (\Exception $exception) {
+            return reponse()->json(["message"=>"System Errors"], 500);
         }
     }
 
-    public function destroy($id){
-        $Comments = $this->CommentRepository->delete($id);
-        if($Comments == true){
-            return redirect('admin/Categories/CategoriesBlog')->with('thong_bao','Delete an item success!');
-        }else{
-            return redirect('admin/Categories/CategoriesBlog')->with('thong_bao','Delete an item failed');
+    /**
+     * get reply of comment
+     *
+     * @param  id
+     * @return Comment
+     */
+    public function getReplyComment($idReply) 
+    {
+        if (!$idReply) {
+            return null;
         }
-    }
-    public function getParentID($id){
-        $Parent_id = $this->CommentRepository->getParent_id($id);
-        return $Parent_id;
-    }
-    public function getDetails($id){
-        $Comment = $this->show($id);
-        $Reply = $this->CommentRepository->getReply($id);
-        $idUser = $this->CommentRepository->getIdUser($id);
-        $User = $this->UserRepository->find($idUser->idUser);
-        $idBlog = $this->CommentRepository->getIdBlog($id);
-        $Blog = $this->BlogRepository->find($idBlog->idBlog);
-        return view("admin.Comments.details",['Comment'=>$Comment,'Reply'=>$Reply,'User'=>$User,'Blog'=>$Blog]);
-    }
-    public function updateState(Request $request, $id){
-        $State = $request->State;
-        $Update = $this->CommentRepository->updateState($id, $State);
-        if($Update == 1){
-            return redirect()->back()->with("thong_bao","Update state success");
-        }else{
-            return redirect()->back()->with("thong_bao","Update state failed, please check again");
+
+        $commentRep = Comment::find($idReply);
+
+        if (!$commentRep) {
+            return null;
         }
-    }
-    public function getUpdate($id){
-        $Comments = $this->show($id);
-        return view("admin.Comments.update",['Comments'=>$Comments]);
+
+        $result = [];
+        $result["id"] = $commentRep->id;
+        $result["owner_id"] = $commentRep->owner_id;
+
+        $studentOwner = Student::find($commentRep->owner_id);
+
+        if (!$studentOwner) {
+            return null;
+        }
+
+        $result["username"] = $studentOwner->name;
+
+        //get name of friends tag
+        $friendsTagReponse = [];
+        $friendsTag = json_decode($commentRep->friends_tag);
+
+        foreach ($friendsTag as $item) {
+            $studentTag = Student::find($item);
+            if ($studentTag) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($friendsTagReponse, $temp);
+            }
+        }
+
+        $result["friends_tag"] = $friendsTagReponse;
+        $result["content"] = $commentRep->content;
+        $result["images"] = $commentRep->images_enclose;
+
+        //get list liked
+        $likedResponse = [];
+        $liked = json_decode($commentRep->liked);
+
+        foreach ($liked as $item) {
+            $studentLiked = Student::find($item);
+            if ($studentLiked) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($likedResponse, $temp);
+            }
+        }
+
+        $result["liked"] = $likedResponse;
+        $result["time_created"] = $commentRep->created_at;
+
+        return $result;
     }
 
-    public function adminReply(Request $request,$id){
-        echo $id;
+    /**
+     * get detail comment
+     *
+     * @param  id
+     * @return Comment with  replies
+     */
+    public function getComment($idComment) 
+    {
+        if (!$idComment) {
+            return null;
+        }
+
+        $comment = Comment::find($idComment);
+
+        if (!$comment) {
+            return null;
+        }
+
+        $result = [];
+        $result["id"] = $comment->id;
+        $result["owner_id"] = $comment->owner_id;
+
+        $studentOwner = Student::find($comment->owner_id);
+
+        if (!$studentOwner) {
+            return null;
+        }
+
+        $result["username"] = $studentOwner->name;
+
+        //get name of friends tag
+        $friendsTagReponse = [];
+        $friendsTag = json_decode($comment->friends_tag);
+
+        foreach ($friendsTag as $item) {
+            $studentTag = Student::find($item);
+            if ($studentTag) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($friendsTagReponse, $temp);
+            }
+        }
+
+        $result["friends_tag"] = $friendsTagReponse;
+        $result["content"] = $comment->content;
+        $result["images"] = $comment->images_enclose;
+
+        //get list liked
+        $likedResponse = [];
+        $liked = json_decode($comment->liked);
+
+        foreach ($liked as $item) {
+            $studentLiked = Student::find($item);
+            if ($studentLiked) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($likedResponse, $temp);
+            }
+        }
+
+        $result["liked"] = $likedResponse;
+
+        //get replies
+        $repliesResponse = [];
+        $replies = json_decode($comment->replies);
+
+        foreach ($replies as $item) {
+            $reply = $this->getReplyComment($item);
+
+            if ($reply) {
+                array_push($repliesResponse, $reply);
+            }
+        }
+
+        $result["replies"] = $repliesResponse;
+        $result["time_created"] = $comment->created_at;
+
+        return $result;
     }
 }

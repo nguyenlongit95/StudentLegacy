@@ -3,186 +3,298 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Repositories\Blogs\BlogRepositoryInterface;
-
-use App\Repositories\CategoryBlogs\CategoryBlogRepositoryInterface;
+use App\Blog;
+use App\Student;
+use App\Comment;
+use App\http\controllers\StudentController;
+use App\http\controllers\CommentController;
+use Carbon\Carbon;
 
 class BlogController extends Controller
 {
-    /**
-     *
-     * Tại đây ta gọi và sử dungj các Repository một cách đơn giản
-     * Mỗi một phương thức gọi ta dùng 1 phương thức.
-     *
-     * */
-    // Đây là biến trung gian để gọi đến Interface
-    protected $BlogRepositories;
-    protected $CategoryBlogs;
+    protected $studentController;
+    protected $commentController;
+    public function __construct(StudentController $studentController, CommentController $commentController) {
+      $this->studentController = $studentController;
+      $this->commentController = $commentController;
+    }
 
-    // Phương thức khởi tạo để gọi đến interface, Tham số đầu vào chính là interface
-    public function __construct(BlogRepositoryInterface $reporitoryBlog, CategoryBlogRepositoryInterface $repositoryCategoryBlog)
+    /**
+     * Store a newly created blog in DB
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
     {
-        $this->BlogRepositories = $reporitoryBlog;
-        $this->CategoryBlogs = $repositoryCategoryBlog;
-    }
-
-    /**
-     * Tại đây ta xây dựng CURD một cách ngắn gọn như sau
-     * index
-     * show
-     * update
-     * delete
-     * restore
-     * */
-    public function index(){
-        $Blogs = $this->BlogRepositories->getAll(10);
-        return view('admin.Blogs.index', ['Blogs'=>$Blogs]);
-    }
-
-    public function show($id){
-        $Blogs = $this->BlogRepositories->find($id);
-        return $Blogs;
-    }
-
-    public function getStore(){
-        $Categories = $this->getCategories();
-        return view('admin.Products.create',['Categories'=>$Categories]);
-    }
-
-    public function store(Request $request){
-        $data = $request->all();
-        $file = $request->file("image");
-        $fileExtendstion = $file->getClientOriginalExtension();
-        if($fileExtendstion == "jpg" || $fileExtendstion == "JPG" || $fileExtendstion == "jpeg" || $fileExtendstion == "JPEG" || $fileExtendstion == "png"){
-            $fileName = $file->getClientOriginalName();
-            $Name = str_random(5) . $fileName;
-            if($file->move("upload/Blogs/",$Name)){
-                // Sau khi kiểm tra tất cả xong thì thêm hình ảnh tại đây
-                $data['image'] = $Name;
-            }else{
-                return redirect('admin/Blog/Blogs')->with('thong_bao','Add new item false, move image false!');
-            }
-        }else{
-            return redirect('admin/Blog/Blogs')->with('thong_bao','Add new item false, check image again!');
-        };
-        $Blogs = $this->BlogRepositories->create($data);
-        if($Blogs == true){
-            return redirect('admin/Blog/Blogs')->with('thong_bao','Add new item success');
-        }else{
-            return redirect()->back()->with('thong_bao','Add new item failed');
+        if (!$request->owner_id) {
+            return response()->json(["message"=>"blog's owner id is null"], 400);
         }
-    }
 
-    public function update(Request $request, $id){
-        $data = $request->all();
-        $Blogs = $this->BlogRepositories->update($data,$id);
-        if($Blogs == true){
-            return redirect()->back()->with('thong_bao','Update an item success!');
-        }else{
-            return redirect()->back()->with('thong_bao','Update an item failed!');
+        if (!$request->content) {
+            return response()->json(["message"=>"blog's content is null"], 400);
         }
-    }
 
-    /**
-     * Phương thức thay đổi hình ảnh của bài viết
-     * Trước khi thay đổi hình ảnh thì phải xóa hình ảnh cũ đi
-     * Tham số đầu vào là id của bài viết
-     * Gọi đến phương thức xóa hình ảnh tại Eloquent
-     * */
-    public function changeImage(Request $request,$id){
-        $ImageBlog = $this->BlogRepositories->deleteImageBlog($id);
-        $this->validate($request,[
-           'image'=>'required'
-        ],[
-            'image.required'=>'Please chose a image'
-        ]);
-        if($ImageBlog == 1){
-            // Tiến hành thêm mới hình ảnh tại đây
-            $file = $request->file("image");
-            $fileExtendstion = $file->getClientOriginalExtension();
-            if($fileExtendstion == "jpg" || $fileExtendstion == "JPG" || $fileExtendstion == "jpeg" || $fileExtendstion == "JPEG" || $fileExtendstion == "png"){
-                 $fileName = $file->getClientOriginalName();
-                 $Name = str_random(5) . $fileName;
-                 if($file->move("upload/Blogs/",$Name)){
-                     // Sau khi kiểm tra tất cả xong thì thêm hình ảnh tại đây
-                     $InsertImage = $this->BlogRepositories->insertImage($id,$Name);
-                     if($InsertImage == 1){
-                         return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Update image success');
-                     }else{
-                         return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Update image failed');
-                     }
-                 }else{
-                     return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Upload image failed');
-                 }
-            }else{
-                return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Wrong image format');
-            }
-        }else if($ImageBlog == 2){
-            $file = $request->file("image");
-            $fileExtendstion = $file->getClientOriginalExtension();
-            if($fileExtendstion == "jpg" || $fileExtendstion == "JPG" || $fileExtendstion == "jpeg" || $fileExtendstion == "JPEG" || $fileExtendstion == "png"){
-                $fileName = $file->getClientOriginalName();
-                $Name = str_random(5) . $fileName;
-                if($file->move("upload/Blogs/",$Name)){
-                    // Sau khi kiểm tra tất cả xong thì thêm hình ảnh tại đây
-                    $InsertImage = $this->BlogRepositories->insertImage($id,$Name);
-                    if($InsertImage == 1){
-                        return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Update image success');
-                    }else{
-                        return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Update image failed');
-                    }
-                }else{
-                    return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Upload image failed');
-                }
-            }else{
-                return redirect("admin/Blog/updateBlog/" . $id)->with('thong_bao','Wrong image format');
-            }
-        }else{
-            return redirect()->back()->with('thong_bao','Cannot delete image file!');
+        // create new blog to insert into DB
+        $blog = new Blog;
+        $blog->owner_id = $request->owner_id;
+
+        if (!$request->friends_tag) {
+            $blog->friends_tag = "[]";
+        } else {
+            $blog->friends_tag = $request->friends_tag;
+        }
+        
+        if (!$request->subjects_tag) {
+            $blog->subjects_tag = "[]";
+        } else {
+            $blog->subjecs_tag = $request->subjecs_tag;
+        }
+        
+        if (!$request->access_modifier) {
+            $blog->access_modifier = null;
+        } else {
+            $blog->access_modifier = $request->access_modifier;
+        }
+        
+        if (!$request->status) {
+            $blog->status = null;
+        } else {
+            $blog->status = $request->status;
+        }
+        
+        $blog->content = $request->content;
+
+        if (!$request->images_enclose) {
+            $blog->images_enclose = "[]";
+        } else {
+            $blog->images_enclose = $request->images_enclose;
+        }
+        
+        if (!$request->files_enclose) {
+            $blog->files_enclose = "[]";
+        } else {
+            $blog->files_enclose = $request->files_enclose;
+        }
+        
+        if (!$request->liked) {
+            $blog->liked = "[]";
+        } else {
+            $blog->liked = $request->liked;
+        }
+
+        if (!$request->comments) {
+            $blog->comments = "[]";
+        } else {
+            $blog->comments = $request->comments;
+        }        
+        
+        $blog->created_at = Carbon::now();
+        $blog->updated_at = Carbon::now();
+
+        try {
+            $blog->save();
+            return response()->json($blog, 200);
+        } catch (\Exception $exception) {
+            return response()->json(["message"=>"DB Errors"], 500);
         }
     }
 
     /**
-     * Khi xóa Blog thì phải xóa hình ảnh của Blog trước
-     * Sau khi xóa thành công thì mới xáo Blog
-     * Gọi đến phương thức xóa hình ảnh tại Eloquent
-     * */
-    public function destroy($id){
-        $deleteImage = $this->BlogRepositories->deleteImageBlog($id);
-        if($deleteImage == 1){
-            $deleteBlog = $this->BlogRepositories->delete($id);
-            if($deleteBlog == true){
-                return redirect("admin/Blog/Blogs" . $id)->with('thong_bao','Delete blogs success');
-            }else{
-                return redirect("admin/Blog/Blogs" . $id)->with('thong_bao','Delete blog failed');
-            }
-        }else if($deleteImage == 2){
-            $deleteBlog = $this->BlogRepositories->delete($id);
-            if($deleteBlog == true){
-                return redirect("admin/Blog/Blogs" . $id)->with('thong_bao','Delete blogs success');
-            }else{
-                return redirect("admin/Blog/Blogs" . $id)->with('thong_bao','Delete blogs failed');
-            }
-        }else{
-            return redirect("admin/Blog/Blogs" . $id)->with('thong_bao','Cannot delete image, please check system again');
+     * Store a new like blog
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */    
+    public function storeLikedBlog(Request $request) {
+        if (!$request->idBlog) {
+            return response()->json(["message"=>"Please enter idBlog"], 400);
+        }
+
+        if (!$request->idStudent) {
+            return response()->json(["message"=>"Please enter idStudent"], 400);
+        }
+
+        if (!$request->like) {
+            return response()->json(["message"=>"Please enter like"], 400);
+        }
+
+        $blog = Blog::find($request->idBlog);
+
+        if (!$blog) {
+            return response()->json(["message"=>"Blog not found"], 422);
+        }
+
+        $student = Student::find($request->idStudent);
+
+        if (!$student) {
+            return response()->json(["message"=>"Student not found"], 422);
+        }
+
+        $listLiked = json_decode($blog->liked);
+        $isLiked = in_array($request->idStudent, $listLiked);
+
+        if ($request->like == 1 && !$isLiked) {
+            array_push($listLiked, $request->idStudent);
+        }
+
+        if ($request->like == -1 && $isLiked) {
+            $idStudent = $request->idStudent;
+            $listLiked = array_filter($listLiked, function ($value) use ($idStudent) {
+                return $value != $idStudent;
+            });
+
+        }
+
+        $blog->liked = json_encode($listLiked);
+        try {
+            $blog->save();
+            return response()->json($blog->liked, 200);
+        } catch(\Exception $exception) {
+            return response()->json(["message"=>"Systems Errors"], 500);
         }
     }
 
-    public function getAddBlogs(){
-        $CategoryBlogs = $this->CategoryBlogs->getAll(10000);
-        return view('admin.Blogs.create',['CategoryBlogs'=>$CategoryBlogs]);
-    }
-    public function getUpdateBlogs($id){
-        $Blog = $this->BlogRepositories->find($id);
-        $CategoryBlog = $this->CategoryBlogs->getAll(10000);
-        return view('admin.Blogs.update',['Blog'=>$Blog,'CategoryBlog'=>$CategoryBlog]);
+    /**
+     * get all blog from DB
+     *
+     * @param  id_student
+     * @return \Illuminate\Http\Response
+     */
+    public function getAllBlog($idStudent) 
+    {
+        $blogs = Blog::get();
+
+        $response = [];
+
+        foreach ($blogs as $item) {
+            $temp = [];
+            $temp["id"] = $item->id;
+            $temp["owner_id"] = $item->owner_id;
+
+            //get info of owner blog
+            $student = Student::find($item->owner_id);
+
+            if ($student) {
+                $temp["username"] = $student->name;
+                $temp["avatar"] = $student->avatar;
+                $temp["friends-tag"] = $item->friends_tag;
+                $temp["time_created"] = $item->created_at->toDateTimeString();
+                $temp["content"] = $item->content;
+                $temp["images"] = $item->images_enclose;
+                $temp["files"] = $item->files_enclose;
+                $temp["liked"] = count(json_decode($item->liked));
+                $temp["comments"] = count(json_decode($item->comments));
+                array_push($response, $temp);
+            }
+            
+        }
+        return response()->json($response, 200);
     }
 
     /**
-     * Ajax slug
-     * */
-    public function ajaxSlug(Request $request){
-        $slug = $this->BlogRepositories->createSlug($request->title);
-        return $slug;
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        //
+    }
+
+    /**
+     * get detail blog
+     *
+     * @param  int  idStudent, idBlog
+     * @return \Illuminate\Http\Response
+     */
+    public function getDetailBlog($idStudent, $idBlog)
+    {
+        if (!$idStudent) {
+            return response()->json(["message"=>"Id of student is null"], 400);
+        }
+
+        if (!$idBlog) {
+            return response()->json(["message"=>"Id of blog is null"], 400);
+        }
+
+        $student = Student::find($idStudent);
+
+        if (!$student) {
+            return response()->json(["message"=>"Student not found"],422);
+        }
+
+        $blog = Blog::find($idBlog);
+
+        if (!$blog) {
+            return response()->json(["message"=>"blog not found"], 422);
+        }
+
+        $response = [];
+        $response["id"] = $blog->id;
+        $response["owner_id"] = $blog->owner_id;
+
+        $studentOwner = Student::find($blog->owner_id);
+
+        if (!$studentOwner) {
+            return response()->json(["message"=>"Student owner not found"], 422);
+        }
+
+        $response["username"] = $studentOwner->name;
+        $response["avatar"] = $studentOwner->avatar;
+
+        //get name of friends tag
+        $friendsTagReponse = [];
+        $friendsTag = json_decode($blog->friends_tag);
+
+        foreach ($friendsTag as $item) {
+            $studentTag = Student::find($item);
+            if ($studentTag) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($friendsTagReponse, $temp);
+            }
+        }
+
+        $response["friends_tag"] = $friendsTagReponse;
+        $response["time_created"] = $blog->created_at;
+        $response["time_updated"] = $blog->updated_at;
+        $response["content"] = $blog->content;
+        $response["images"] = $blog->images_enclose;
+        $response["files"] = $blog->files_enclose;
+
+        //get list liked
+        $likedResponse = [];
+        $liked = json_decode($blog->liked);
+
+        foreach ($liked as $item) {
+            $studentLiked = Student::find($item);
+            if ($studentLiked) {
+                $temp = [];
+                $temp["id"] = $studentTag->id;
+                $temp["name"] = $studentTag->name;
+                array_push($likedResponse, $temp);
+            }
+        }
+
+        $response["liked"] = $likedResponse;
+
+        //get list comments
+        $commentsResponse = [];
+        $comments = json_decode($blog->comments);
+
+        foreach ($comments as $item) {
+            $comment = $this->commentController->getComment($item);
+
+            if ($comment) {
+                array_push($commentsResponse, $comment);
+            }
+        }
+
+        $response["comments"] = $commentsResponse;
+        return response()->json($response, 200);
     }
 }

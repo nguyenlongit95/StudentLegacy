@@ -17,6 +17,7 @@ class Student extends Model
         "address",
         "avatar",
         "friends",
+        "friends_requested",
         "gender",
         "description",
         "date_of_birth",

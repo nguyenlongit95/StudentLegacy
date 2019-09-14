@@ -5,17 +5,17 @@ namespace App\Http\Controllers;
 use App\Repositories\Eloquent\RepositoryInterface;
 use Illuminate\Http\Request;
 use App\Subject;
-use App\Repositories\Subject\SubjectRepositoryInterface;
+use App\http\controllers\AcademyController;
+use Carbon\Carbon;
 
 class SubjectController extends Controller
 {
-    protected $subjectRepositories;
+   protected $academyController;
 
-    // Phương thức khởi tạo để gọi đến interface, Tham số đầu vào chính là interface
-    public function __construct(SubjectRepositoryInterface $reporitorySubject)
-    {
-        $this->subjectRepositories = $reporitorySubject;
-    }
+   public function __construct(AcademyController $controller) 
+   {
+        $this->academyController = $controller;
+   }
     /**
      * Display a listing of the resource.
      *
@@ -44,24 +44,28 @@ class SubjectController extends Controller
      */
     public function store(Request $request)
     {   
+        if (!$request->academy_id) {
+            return response()->json(["message"=>"Id academy not found"], 400);
+        }
+
         if (!$request->name) {
-            return reponse()->json(["message"=>"Subject name not found"], 204);
+            return reponse()->json(["message"=>"Subject name not found"], 400);
         }
 
         if (!$request->time_start) {
-            return reponse()->json(["message"=>"Subject time start not found"], 204);
+            return reponse()->json(["message"=>"Subject time start not found"], 400);
         }
 
         if (!$request->time_end) {
-            return reponse()->json(["message"=>"Subject time end not found"], 204);
+            return reponse()->json(["message"=>"Subject time end not found"], 400);
         }
 
         if (!$request->max_student) {
-            return response()->json(["message"=>"Subject max student not found"], 204);
+            return response()->json(["message"=>"Subject max student not found"], 400);
         }
 
         if (!$request->fee) {
-            return response()->json(["message"=>"Subject fee not found"], 204);
+            return response()->json(["message"=>"Subject fee not found"], 400);
         }
 
         //create new object Subject to insert into database
@@ -71,57 +75,71 @@ class SubjectController extends Controller
         $subject->time_end = $request->time_end;
         $subject->max_student = $request->max_student;
         $subject->fee = $request->fee;
-        $subject->hotline = $request->hotline;
-        $subject->short_description = $request->short_description;
-        $subject->description = $request->description;
 
-        $subject->save();
+        if (!$request->hotline) {
+            $subject->hotline = null;
+        } else {
+            $subject->hotline = $request->hotline;
+        }
+
+        if (!$request->short_description) {
+            $subject->short_description = null;
+        } else {
+            $subject->short_description = $request->short_description;
+        }
+        
+        if (!$request->description) {
+            $subject->description = null;
+        } else {
+            $subject->description = $request->description;
+        }
+        
+        try {
+            $subject->save();
+
+            //save id subject into academy
+            $this->academyController->storeSubjectToAcademy($subject->id, $request->academy_id);
+            return response()->json($subject, 200);
+        } catch (\Exception $exception) {
+            return response()->json(["message"=>"DB Errors"], 500);
+        } 
     }
 
     /**
-     * Display the specified resource.
+     * get all subject
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param  
+     * @return list subject
      */
-    public function show($id)
+    public function getAllSubject()
     {
-        dd($id);
-        $subject = $this->subjectRepositories->find($id);
-        return response()->json($subject);
-    }
+        $subjects = Subject::get();
+        $response = [];
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
+        $subjects = array_sort($subjects, function ($value) {
+            return new Carbon($value['time']);
+        });
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
+        foreach ($subjects as $item) {
+            $temp = [];
+            $temp["id"] = $item->id;
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
+            //get academy
+            $academy = $this->academyController->getBriefAcademyByIdSubject($item->id);
+            
+            $temp["academy"] = $academy;
+            $temp["subject_name"] = $item->name;
+            $temp["time_start"] = $item->time_start;
+            $temp["time_end"] = $item->time_end;
+            $temp["max_student"] = $item->max_student;
+            $temp["fee"] = $item->fee;
+            $temp["hotline"] = $item->hotline;
+            $temp["short_description"] = $item->short_description;
+            $temp["description"] = $item->description;
+            $temp["time_created"] = $item->created_at->toDateTimeString();
+            array_push($response, $temp);
+        }
+
+        return response()->json($response, 200);
     }
 }
