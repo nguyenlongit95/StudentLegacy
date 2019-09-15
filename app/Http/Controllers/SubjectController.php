@@ -44,28 +44,9 @@ class SubjectController extends Controller
      */
     public function store(Request $request)
     {   
-        if (!$request->academy_id) {
-            return response()->json(["message"=>"Id academy not found"], 400);
-        }
-
-        if (!$request->name) {
-            return reponse()->json(["message"=>"Subject name not found"], 400);
-        }
-
-        if (!$request->time_start) {
-            return reponse()->json(["message"=>"Subject time start not found"], 400);
-        }
-
-        if (!$request->time_end) {
-            return reponse()->json(["message"=>"Subject time end not found"], 400);
-        }
-
-        if (!$request->max_student) {
-            return response()->json(["message"=>"Subject max student not found"], 400);
-        }
-
-        if (!$request->fee) {
-            return response()->json(["message"=>"Subject fee not found"], 400);
+        if (!$request->academy_id || !$request->name || !$request->time_start || 
+            !$request->time_end || !$request->max_student || !$request->fee) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         //create new object Subject to insert into database
@@ -142,4 +123,24 @@ class SubjectController extends Controller
 
         return response()->json($response, 200);
     }
+
+    /**
+     * get subject by id
+     *
+     * @param  idSubject
+     * @return Subject
+     */  
+    public function getSubjectBy($idSubject, $timeOrigin)
+     {
+        $timeRequest = Carbon::parse($timeOrigin);
+        $subject = Subject::find($idSubject);
+        $timeStart = Carbon::parse($subject->time_start);
+        $timeEnd = Carbon::parse($subject->time_end);
+        $weekDay = $timeStart->dayOfWeek;
+        if ($timeStart->lt($timeRequest) && $timeRequest->lte($timeEnd)) {
+            return $subject;
+        }
+
+        return null;
+    }  
 }

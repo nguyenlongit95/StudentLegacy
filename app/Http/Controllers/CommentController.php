@@ -109,16 +109,8 @@ class CommentController extends Controller
      */
     public function storeReplyComment(Request $request)
     {
-        if (!$request->owner_id) {
-            return response()->json(["message"=>"comment's owner id is null"], 400);
-        }
-
-        if (!$request->content) {
-            return response()->json(["message"=>"comment's content is null"], 400);
-        }
-
-        if (!$request->parent_cmt_id) {
-            return response()->json(["message"=>" id parent of comment is null"], 400);
+        if (!$request->owner_id || !$request->content || !$request->parent_cmt_id) {
+            return response()->json(["message"=>"Please enter all "], 400);
         }
 
         $parentComment = Comment::find($request->parent_cmt_id);

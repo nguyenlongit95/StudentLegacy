@@ -106,17 +106,10 @@ class BlogController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */    
-    public function storeLikedBlog(Request $request) {
-        if (!$request->idBlog) {
-            return response()->json(["message"=>"Please enter idBlog"], 400);
-        }
-
-        if (!$request->idStudent) {
-            return response()->json(["message"=>"Please enter idStudent"], 400);
-        }
-
-        if (!$request->like) {
-            return response()->json(["message"=>"Please enter like"], 400);
+    public function storeLikedBlog(Request $request) 
+    {
+        if (!$request->idBlog || !$request->idStudent || !$request->like) {
+            return response()->json(["message"=>"Please enter input"], 400);
         }
 
         $blog = Blog::find($request->idBlog);
@@ -212,12 +205,8 @@ class BlogController extends Controller
      */
     public function getDetailBlog($idStudent, $idBlog)
     {
-        if (!$idStudent) {
-            return response()->json(["message"=>"Id of student is null"], 400);
-        }
-
-        if (!$idBlog) {
-            return response()->json(["message"=>"Id of blog is null"], 400);
+        if (!$idStudent || !$idBlog) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         $student = Student::find($idStudent);

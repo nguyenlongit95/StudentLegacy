@@ -9,27 +9,6 @@ use Carbon\Carbon;
 class StudentController extends Controller
 {
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
      * Display the specified resource.
      *
      * @param  int  $id
@@ -45,17 +24,6 @@ class StudentController extends Controller
         }
 
         return response()->json($student, 200);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
     }
 
     /**
@@ -92,17 +60,6 @@ class StudentController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
-
-    /**
      * Function store friends request
      *  Param: idStudent, idFriend
      *
@@ -110,12 +67,8 @@ class StudentController extends Controller
      */
     public function storeFriendRequest(Request $request) 
     {
-        if (!$request->idStudent) {
-            return response()->json(["message"=>"Please enter idStudent"], 400);
-        }
-
-        if (!$request->idFriend) {
-            return response()->json(["message"=>"Please enter idFriend"], 400);
+        if (!$request->idStudent || !$request->idFriend) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         $student = Student::find($request->idStudent);
@@ -150,17 +103,10 @@ class StudentController extends Controller
      *
      * @return messsage
      */
-    public function confirmFriendRequest(Request $request) {
-        if (!$request->idStudent) {
-            return response()->json(["message"=>"Please enter idStudent"], 400);
-        }
-
-        if (!$request->idFriend) {
-            return response()->json(["message"=>"Please enter idFriend"], 400);
-        }
-
-        if (!$request->confirm) {
-            return response()->json(["message"=>"Please enter confirm"], 400);
+    public function confirmFriendRequest(Request $request) 
+    {
+        if (!$request->idStudent || !$request->idFriend || !$request->confirm) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         $student = Student::find($request->idStudent);
@@ -208,7 +154,8 @@ class StudentController extends Controller
      *
      * @return message
      */
-    public function storeFriend(Student $student, $idFriend) {
+    public function storeFriend(Student $student, $idFriend) 
+    {
         $friends = json_decode($student->friends, true);
         $isFriend = in_array(["id"=>$idFriend], $friends);
         if (!$isFriend) {
@@ -245,6 +192,43 @@ class StudentController extends Controller
     }
 
     /**
+     * Function get brief of student
+     *  Param: idStudent
+     *
+     * @return id, username, avatar
+     */
+    public function getBriefStudent($idStudent) 
+    {
+        $student = Student::find($idStudent);
+
+        if (!$student) {
+            return null;
+        }
+
+        $result = [];
+        $result["student_id"] = $idStudent;
+        $result["name"] = $student->name;
+        $result["avatar"] = $student->avatar;
+        return $result;
+    }
+
+    /**
+     * Function check student exist
+     *  Param: id
+     *
+     * @return yes: 1, no: 0
+     */
+    public function checkStudentExist($idStudent) {
+        $student = Student::find($idStudent);
+
+        if ($student) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    /**
      * Function get information of student'friends
      *  Param: id
      *
@@ -252,18 +236,14 @@ class StudentController extends Controller
      */
     public function getInfoFriend($idStudent, $idFriend)
     {
-        if (!$idStudent) {
-            return response()->json(["message"=>"Please enter id of student"], 400);
+        if (!$idStudent || !$idFriend) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         $student = Student::find($idStudent);
 
         if (!$student) {
             return response()->json(["message"=>"student not found"], 422);
-        }
-
-        if (!$idFriend) {
-            return response()->json(["message"=>"Please enter id of friend"], 400);
         }
 
         $friendSearch = Student::find($idFriend);

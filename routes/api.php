@@ -35,11 +35,14 @@ Route::group(['prefix'=>'v1'], function () {
     Route::get('news-feed/{idStudent}', 'BlogController@getAllBlog');
 
     //A03 - Inform
+    Route::post('inform-post', 'LogController@storeLog');
+    Route::get('inform/{idStudent}', 'LogController@getAllLog');
 
     //A04 - Course
     Route::get('course', 'SubjectController@getAllSubject');
 
     //A05 - Schedule
+    Route::get('schedule/{idStudent},{time}', 'ScheduleController@getScheduleBy');
 
     //A06 - Setting
     Route::get('settings/{id}', 'StudentController@getInfoStudent');
@@ -56,12 +59,12 @@ Route::group(['prefix'=>'v1'], function () {
     // Subject
     Route::get('academy', 'AcademyController@getAllAcademy');
 
-    
-
     Route::post('store','SubjectController@store');
     Route::get('show/{id}','SubjectController@show');
 
     Route::post('friend-request','StudentController@storeFriendRequest');
     Route::post('confirm-friend-request', 'StudentController@confirmFriendRequest');
-    
+
+    Route::get('test/{idSubject},{timeOrigin}', 'SubjectController@getSubjectBy');
+    Route::get('test-lesson/{idLesson},{time}', 'LessonController@getLessonBy');
 });
