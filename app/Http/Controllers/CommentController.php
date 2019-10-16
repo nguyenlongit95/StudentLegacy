@@ -11,18 +11,6 @@ use Carbon\Carbon;
 class CommentController extends Controller
 {
     /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
      * Store a newly comment in DB.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -84,7 +72,7 @@ class CommentController extends Controller
         }
 
         $comment->created_at = Carbon::now();
-        $comment_updated_at = Carbon::now();
+        $comment->updated_at = Carbon::now();
 
         try {
             $comment->save();
@@ -201,7 +189,11 @@ class CommentController extends Controller
             return null;
         }
 
-        $result["username"] = $studentOwner->name;
+        $studentResponse = [];
+        $studentResponse["id"] = $studentOwner->id;
+        $studentResponse["name"] = $studentOwner->name;
+        $studentResponse["avatar"] = $studentOwner->avatar;
+        $result["student"] = $studentResponse;
 
         //get name of friends tag
         $friendsTagReponse = [];
@@ -219,7 +211,7 @@ class CommentController extends Controller
 
         $result["friends_tag"] = $friendsTagReponse;
         $result["content"] = $commentRep->content;
-        $result["images"] = $commentRep->images_enclose;
+        $result["images_enclose"] = json_decode($commentRep->images_enclose);
 
         //get list liked
         $likedResponse = [];
@@ -236,7 +228,7 @@ class CommentController extends Controller
         }
 
         $result["liked"] = $likedResponse;
-        $result["time_created"] = $commentRep->created_at;
+        $result["created_at"] = $commentRep->created_at->toDateTimeString();
 
         return $result;
     }
@@ -268,8 +260,12 @@ class CommentController extends Controller
         if (!$studentOwner) {
             return null;
         }
-
-        $result["username"] = $studentOwner->name;
+        
+        $studentResponse = [];
+        $studentResponse["id"] = $studentOwner->id;
+        $studentResponse["name"] = $studentOwner->name;
+        $studentResponse["avatar"] = $studentOwner->avatar;
+        $result["student"] = $studentResponse;
 
         //get name of friends tag
         $friendsTagReponse = [];
@@ -287,7 +283,7 @@ class CommentController extends Controller
 
         $result["friends_tag"] = $friendsTagReponse;
         $result["content"] = $comment->content;
-        $result["images"] = $comment->images_enclose;
+        $result["images_enclose"] = json_decode($comment->images_enclose);
 
         //get list liked
         $likedResponse = [];
@@ -318,7 +314,7 @@ class CommentController extends Controller
         }
 
         $result["replies"] = $repliesResponse;
-        $result["time_created"] = $comment->created_at;
+        $result["created_at"] = $comment->created_at->toDateTimeString();
 
         return $result;
     }

@@ -10,13 +10,14 @@ class Lesson extends Model
     
     protected $fillable = [
         "id",
-        "class_id",
-        "subject_id",
-        "room",
-        "address",
-        "week_day",
-        "time_start",
-        "time_end",
+        "name",
+        "brief_content",
+        "content",
+        "images_enclose",
+        "files_enclose",
+        "links_enclose",
+        "quick_test",
+        "time_limit",
         "created_at",
         "updated_at"
     ];

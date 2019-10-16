@@ -5,9 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Blog;
 use App\Student;
-use App\Comment;
-use App\http\controllers\StudentController;
-use App\http\controllers\CommentController;
 use Carbon\Carbon;
 
 class BlogController extends Controller
@@ -27,44 +24,17 @@ class BlogController extends Controller
      */
     public function store(Request $request)
     {
-        if (!$request->owner_id) {
-            return response()->json(["message"=>"blog's owner id is null"], 400);
-        }
-
-        if (!$request->content) {
-            return response()->json(["message"=>"blog's content is null"], 400);
+        if (!$request->owner_id || !$request->hash_tag || !$request->content) {
+            return response()->json(["message"=>"Please enter all input"], 400);
         }
 
         // create new blog to insert into DB
         $blog = new Blog;
         $blog->owner_id = $request->owner_id;
-
-        if (!$request->friends_tag) {
-            $blog->friends_tag = "[]";
-        } else {
-            $blog->friends_tag = $request->friends_tag;
-        }
-        
-        if (!$request->subjects_tag) {
-            $blog->subjects_tag = "[]";
-        } else {
-            $blog->subjecs_tag = $request->subjecs_tag;
-        }
-        
-        if (!$request->access_modifier) {
-            $blog->access_modifier = null;
-        } else {
-            $blog->access_modifier = $request->access_modifier;
-        }
-        
-        if (!$request->status) {
-            $blog->status = null;
-        } else {
-            $blog->status = $request->status;
-        }
-        
+        $blog->hash_tag = $request->hash_tag;
+        $blog->status = "In Review";
         $blog->content = $request->content;
-
+    
         if (!$request->images_enclose) {
             $blog->images_enclose = "[]";
         } else {
@@ -77,21 +47,12 @@ class BlogController extends Controller
             $blog->files_enclose = $request->files_enclose;
         }
         
-        if (!$request->liked) {
-            $blog->liked = "[]";
-        } else {
-            $blog->liked = $request->liked;
-        }
-
-        if (!$request->comments) {
-            $blog->comments = "[]";
-        } else {
-            $blog->comments = $request->comments;
-        }        
-        
+        $blog->liked = "[]";
+        $blog->rates = "[]";
+        $blog->comments = "[]";       
         $blog->created_at = Carbon::now();
         $blog->updated_at = Carbon::now();
-
+        
         try {
             $blog->save();
             return response()->json($blog, 200);
@@ -124,15 +85,15 @@ class BlogController extends Controller
             return response()->json(["message"=>"Student not found"], 422);
         }
 
-        $listLiked = json_decode($blog->liked);
+        $listLiked = json_decode($blog->liked, true);
         $isLiked = in_array($request->idStudent, $listLiked);
 
         if ($request->like == 1 && !$isLiked) {
-            array_push($listLiked, $request->idStudent);
+            array_push($listLiked, $student->id);
         }
 
         if ($request->like == -1 && $isLiked) {
-            $idStudent = $request->idStudent;
+            $idStudent = $student->id;
             $listLiked = array_filter($listLiked, function ($value) use ($idStudent) {
                 return $value != $idStudent;
             });
@@ -140,9 +101,90 @@ class BlogController extends Controller
         }
 
         $blog->liked = json_encode($listLiked);
+
         try {
             $blog->save();
-            return response()->json($blog->liked, 200);
+            $blog->liked = json_decode($blog->liked);
+            return response()->json($blog, 200);
+        } catch(\Exception $exception) {
+            return response()->json(["message"=>"Systems Errors"], 500);
+        }
+    }
+
+     /**
+     * Store a new star blog
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */    
+    public function storeRateBlog(Request $request) 
+    {
+        if (!$request->idBlog || !$request->idStudent || !$request->numberStar) {
+            return response()->json(["message"=>"Please enter input"], 400);
+        }
+
+        $blog = Blog::find($request->idBlog);
+
+        if (!$blog) {
+            return response()->json(["message"=>"Blog not found"], 422);
+        }
+
+        $student = Student::find($request->idStudent);
+
+        if (!$student) {
+            return response()->json(["message"=>"Student not found"], 422);
+        }
+
+        $rates = json_decode($blog->stars, true);
+        $newRates = [];
+        foreach ($rates as $item) {
+            if ($item["student_id"] != $student->id) {
+                array_push($newRates, $item);
+            }
+        }
+
+        $newRate = [];
+        $newRate["student_id"] = $student->id;
+        $newRate["number_stars"] = (int)$request->numberStar;
+        array_push($newRates, $newRate);
+        
+        $blog->stars = json_encode($newRates);
+
+        try {
+            $blog->save();
+            $blog->liked = json_decode($blog->liked);
+            return response()->json($blog, 200);
+        } catch(\Exception $exception) {
+            return response()->json(["message"=>"Systems Errors"], 500);
+        }
+    }
+
+     /**
+     * Store a new comment blog
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */ 
+    public function storeCommentBlog($idBlog, $idComment)
+    {
+        $blog = Blog::find($idBlog);
+
+        if (!$blog) {
+            return response()->json(["message"=>"Blog not found"], 422);
+        }
+
+        $comments= json_decode($blog->comments);
+        $isComment = in_array($idComment, $comments);
+
+        if (!$isComment) {
+            array_push($comments, $idComment);
+        }
+
+        $blog->comments = json_encode($comments);
+
+        try {
+            $blog->save();
+            return response()->json($blog, 200);
         } catch(\Exception $exception) {
             return response()->json(["message"=>"Systems Errors"], 500);
         }
@@ -169,14 +211,22 @@ class BlogController extends Controller
             $student = Student::find($item->owner_id);
 
             if ($student) {
-                $temp["username"] = $student->name;
-                $temp["avatar"] = $student->avatar;
-                $temp["friends-tag"] = $item->friends_tag;
+                $studentResponse = [];
+                $studentResponse["username"] = $student->name;
+                $studentResponse["avatar"] = $student->avatar;
+                $temp["student"] = $studentResponse;
                 $temp["time_created"] = $item->created_at->toDateTimeString();
                 $temp["content"] = $item->content;
-                $temp["images"] = $item->images_enclose;
-                $temp["files"] = $item->files_enclose;
+                $temp["images"] = json_decode($item->images_enclose);
+                $temp["files"] = json_decode($item->files_enclose);
                 $temp["liked"] = count(json_decode($item->liked));
+                $stars = json_decode($item->stars);
+                $numberStar = 0;
+
+                foreach ($stars as $item) {
+                    $numberStar += $item["number_stars"];
+                }
+                $temp["rates"] = $numberStar;
                 $temp["comments"] = count(json_decode($item->comments));
                 array_push($response, $temp);
             }
@@ -231,29 +281,16 @@ class BlogController extends Controller
             return response()->json(["message"=>"Student owner not found"], 422);
         }
 
-        $response["username"] = $studentOwner->name;
-        $response["avatar"] = $studentOwner->avatar;
+        $studentResponse = [];
+        $studentResponse["username"] = $student->name;
+        $studentResponse["avatar"] = $student->avatar;
+        $response["student"] = $studentResponse;
 
-        //get name of friends tag
-        $friendsTagReponse = [];
-        $friendsTag = json_decode($blog->friends_tag);
-
-        foreach ($friendsTag as $item) {
-            $studentTag = Student::find($item);
-            if ($studentTag) {
-                $temp = [];
-                $temp["id"] = $studentTag->id;
-                $temp["name"] = $studentTag->name;
-                array_push($friendsTagReponse, $temp);
-            }
-        }
-
-        $response["friends_tag"] = $friendsTagReponse;
         $response["time_created"] = $blog->created_at;
         $response["time_updated"] = $blog->updated_at;
         $response["content"] = $blog->content;
-        $response["images"] = $blog->images_enclose;
-        $response["files"] = $blog->files_enclose;
+        $response["images"] = json_decode($blog->images_enclose);
+        $response["files"] = json_decode($blog->files_enclose);
 
         //get list liked
         $likedResponse = [];
@@ -270,6 +307,8 @@ class BlogController extends Controller
         }
 
         $response["liked"] = $likedResponse;
+
+        $response["rates"] = json_decode($blog->rates);
 
         //get list comments
         $commentsResponse = [];

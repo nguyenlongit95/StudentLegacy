@@ -30,9 +30,11 @@ Route::group(['prefix'=>'v1'], function () {
     //A01 - Login
     Route::post('login','StudentController@loginStudent');
     Route::post('updateStudent/{id}','StudentController@update');
+    Route::get('validate/{token}', 'StudentController@validateStudent');
 
     //A02 - News feed
     Route::get('news-feed/{idStudent}', 'BlogController@getAllBlog');
+    Route::post('like-post', 'NewsFeedControler@storeNewLike');
 
     //A03 - Inform
     Route::post('inform-post', 'LogController@storeLog');
@@ -51,8 +53,13 @@ Route::group(['prefix'=>'v1'], function () {
     Route::get('detail-post/{idStudent},{idBlog}', 'BlogController@getDetailBlog');
     Route::get('student/{idStudent},{idFriend}', 'StudentController@getInfoFriend');
     Route::post('create-post','BlogController@store');
-    Route::post('like-post', 'BlogController@storeLikedBlog');
+    // Route::post('like-post', 'BlogController@storeLikedBlog');
+    Route::post('rate-blog', 'BlogController@storeRateBlog');
 
+    //Question
+    Route::post('question-post', 'QuestionController@store');
+    Route::get('question-get-detail/{idStudent},{idQuestion}', 'QuestionController@getDetailQuestion');
+    Route::get('question-get-all/{idStudent}', 'QuestionController@getAllQuestion');
     Route::post('create-comment', 'CommentController@storeComment');
     Route::post('create-reply-comment', 'CommentController@storeReplyComment');
 
@@ -66,5 +73,9 @@ Route::group(['prefix'=>'v1'], function () {
     Route::post('confirm-friend-request', 'StudentController@confirmFriendRequest');
 
     Route::get('test/{idSubject},{timeOrigin}', 'SubjectController@getSubjectBy');
-    Route::get('test-lesson/{idLesson},{time}', 'LessonController@getLessonBy');
+    Route::get('test-blog/{idBlog},{idComment}', 'BlogController@storeCommentBlog');
+
+
+    Route:: get('test-statistic/{dataChange}, {idStudent}, {idRegion}', 'StatisticController@saveIntoStatistic');
+
 });

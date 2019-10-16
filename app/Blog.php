@@ -6,19 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Blog extends Model
 {
-    protected $table = "Blog";
+    protected $table = "blog";
 
     protected $fillable = [
         "id",
         "owner_id",
-        "friends_tag",
-        "subjects_tag",
-        "access_modifier",
+        "hash_tag",
         "status",
         "content",
         "images_enclose",
         "files_enclose",
         "liked",
+        "rates",
         "comments",
         "created_at",
         "updated_at"

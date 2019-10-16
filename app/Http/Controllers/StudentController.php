@@ -27,6 +27,17 @@ class StudentController extends Controller
     }
 
     /**
+     * store newly student
+     *
+     * @param  request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeStudent(Request $request) 
+    {
+        
+    }
+
+    /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -188,7 +199,12 @@ class StudentController extends Controller
             return response()->json(["message"=>"Data not found"], 422);
         }
 
-        return response()->json($student, 200);
+        $student->friends = json_decode($student->friends);
+        $student->friends_requested = json_decode($student->friends_requested);
+        $result = [];
+        $result["code"] = 200;
+        $result["data"] = $student;
+        return response()->json($result, 200);
     }
 
     /**
@@ -218,7 +234,8 @@ class StudentController extends Controller
      *
      * @return yes: 1, no: 0
      */
-    public function checkStudentExist($idStudent) {
+    public function checkStudentExist($idStudent) 
+    {
         $student = Student::find($idStudent);
 
         if ($student) {
@@ -226,6 +243,29 @@ class StudentController extends Controller
         }
 
         return 0;
+    }
+
+    /**
+     * Function validate student with token
+     *  Param: string token
+     *
+     * @return yes: 1, no: 0
+     */
+    public function validateStudent($token) 
+    {
+        $student = Student::where('remember_token', $token)->first();
+
+        if (!$student) {
+            $result = [];
+            $result["active"] = false;
+            $result["student"] = null;
+            return response()->json(["code"=>200, "data"=>$result], 200);
+        }
+
+        $result = [];
+        $result["active"] = true;
+        $result["student"] = $student;
+        return response()->json(["code"=>200, "data"=>$result], 200);
     }
 
     /**
@@ -274,14 +314,15 @@ class StudentController extends Controller
     public function loginStudent(Request $request)
     {
         if (!$request->email && !$request->password) {
-            return response()->json(["message"=>"Email or password not found"], 401);
+            return response()->json(["message"=>401,
+                                        "data"=>null], 401);
         }
 
         $checkLogin = Student::where('email',$request->email)
             ->where('password',$request->password)->first();
         
         if (!$checkLogin) { 
-            return response()->json(["message"=>"Login faild, please check again"], 403);
+            return response()->json(["message"=>403], 403);
         }
 
         // Login success encode start time and id student
@@ -292,7 +333,10 @@ class StudentController extends Controller
             $studentRemember = Student::find($checkLogin->id);
             $studentRemember->remember_token = $remember_token;
             $studentRemember->save();
-            return response()->json(["message"=>$remember_token], 200);
+            $result = [];
+            $result["token"] = $remember_token;
+            return response()->json(["code"=>200,
+                                        "data"=>$result], 200);
         }
         return response()->json(["message"=>"System erros"], 500);
     }
