@@ -22,6 +22,7 @@ class Student extends Model
         "description",
         "date_of_birth",
         "remember_token",
+        "course_bookmark",
         "created_at",
         "updated_at"
     ];

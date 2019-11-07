@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\http\controllers\QuestionController;
+use App\http\controllers\BlogController;
 use App\Comment;
 use App\Blog;
 use App\Student;
@@ -18,21 +20,9 @@ class CommentController extends Controller
      */
     public function storeComment(Request $request)
     {
-        if (!$request->owner_id) {
-            return response()->json(["message"=>"comment's owner id is null"], 400);
-        }
-
-        if (!$request->content) {
-            return response()->json(["message"=>"comment's content is null"], 400);
-        }
-
-        if (!$request->blog_id) {
-            return response()->json(["message"=>"comment's blog id is null"], 400);
-        }
-
-        $blog = Blog::find($request->blog_id);
-        if (!$blog) {
-            return response()->json(["message"=>"Blog include this cmt not found"], 422);
+        if (!$request->owner_id || !$request->content 
+            || !$request->post_id || !$request->type) {
+            return -1;
         }
 
         // Create new comment to insert into DB
@@ -56,7 +46,16 @@ class CommentController extends Controller
         if (!$request->images_enclose) {
             $comment->images_enclose = "[]";
         } else {
-            $comment->images_enclose = $request->images_enclose;
+            $images = $request->images_enclose;
+            $imagesPath = [];
+            foreach ($images as $file) {
+                $name = $file->getClientOriginalName();
+                $path = "http://localhost/StudentLegacy/public/upload/Comments/$name";
+                $newFile = $file->move('upload/Comments', $file->getClientOriginalName());
+                array_push($imagesPath, $path);
+            }
+            
+            $comment->images_enclose = json_encode($imagesPath);
         }
 
         if (!$request->liked) {
@@ -77,15 +76,10 @@ class CommentController extends Controller
         try {
             $comment->save();
             $idComment = $comment->id;
-            $comments = json_decode($blog->comments);
-            // return $comments;
-            array_push($comments, $idComment);
-            $blog->comments = json_encode($comments);
-            $blog->save();
-
-            return response()->json(["comment"=>$comment, "blog"=> $blog], 200);
+            
+            return $idComment;
         } catch (\Exception $exception) {
-            return reponse()->json(["message"=>"System Errors"], 500);
+            return -1;
         }
     }
 
@@ -98,13 +92,13 @@ class CommentController extends Controller
     public function storeReplyComment(Request $request)
     {
         if (!$request->owner_id || !$request->content || !$request->parent_cmt_id) {
-            return response()->json(["message"=>"Please enter all "], 400);
+            return response()->json(["code"=>400,"message"=>"invalid input"], 400);
         }
 
         $parentComment = Comment::find($request->parent_cmt_id);
 
         if (!$parentComment) {
-            return response()->json(["message"=>"Parent comment not found"],422);
+            return response()->json(["code"=>422, "message"=>"Parent comment not found"],422);
         }
 
         // Create new reply comment to insert into DB
@@ -128,7 +122,16 @@ class CommentController extends Controller
         if (!$request->images_enclose) {
             $comment->images_enclose = "[]";
         } else {
-            $comment->images_enclose = $request->images_enclose;
+            $images = $request->images_enclose;
+            $imagesPath = [];
+            foreach ($images as $file) {
+                $name = $file->getClientOriginalName();
+                $path = "http://localhost/StudentLegacy/public/upload/Comments/$name";
+                $newFile = $file->move('upload/Comments', $file->getClientOriginalName());
+                array_push($imagesPath, $path);
+            }
+            
+            $comment->images_enclose = json_encode($imagesPath);
         }
 
         if (!$request->liked) {
@@ -155,9 +158,9 @@ class CommentController extends Controller
             array_push($replies, $idComment);
             $parentComment->replies = json_encode($replies);
             $parentComment->save();
-            return response()->json($comment, 200);
+            return response()->json(["code"=>200, "message"=>"store reply comment success"], 200);
         } catch (\Exception $exception) {
-            return reponse()->json(["message"=>"System Errors"], 500);
+            return reponse()->json(["code"=>500, "message"=>"System Errors"], 500);
         }
     }
 

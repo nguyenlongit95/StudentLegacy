@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Student;
+use App\Course;
 use Carbon\Carbon;
 
 class StudentController extends Controller
@@ -34,7 +35,74 @@ class StudentController extends Controller
      */
     public function storeStudent(Request $request) 
     {
+        if (!$request->name || !$request->email || !$request->password) {
+            return response()->json(["code"=>400, "message"=>"invalid input"], 400);
+        }
+
+        $check = Student::where('email', $request->email)->first();
+    
+        if ($check) {
+            return response()->json(["code"=>422, "message"=>"Email was exist"]);
+        }
+
+
+        $student = new Student;
+        $student->name = $request->name;
+        $student->email = $request->email;
+        $student->password = $request->password;
+
+        if ($request->phone) {
+            $student->phone = $request->phone;
+        }
+
+        if ($request->address) {
+            $student->address = $request->address;
+        }
+
+        if ($request->avatar) {
+            $name = $request->avatar->getClientOriginalName();
+            $path = "http://localhost/StudentLegacy/public/upload/Students/$name";
+            $newFile = $request->avatar->move('upload/Students', $request->avatar->getClientOriginalName());
+            $student->avatar = $path;
+        }
+
+        $student->friends = "[]";
+        $student->friends_requested = "[]";
         
+        if ($student->gender) {
+            $student->gender = $request->gender;
+        }
+
+        if ($request->description) {
+            $student->description = $request->description;
+        }
+
+        if ($request->DOB) {
+            $student->DOB = $request->DOB;
+        }
+
+        $student->course_bookmark = "[]";
+        $student->created_at = Carbon::now();
+        $student->updated_at = Carbon::now();
+
+        // return response()->json($student);
+        try {
+            $student->save;
+            $carbonNow = Carbon::now();
+            $remember_token = md5($student->id."_".$carbonNow);
+            $student->remember_token = $remember_token;
+            $student->save();
+
+            $student->friends = json_decode($student->friends);
+            $student->friends_request = json_decode($student->friends_request);
+            $student->course_bookmark = json_decode($student->course_bookmark);
+            $result["token"] = $remember_token;
+            $result["student"] = $student;
+
+            return response()->json(["code"=>200, "message"=>"register success", "data"=>$result], 200);
+        } catch (\Exception $exception) {
+            return response()->json(["code"=>500, "message"=>"systems error"], 500);
+        }
     }
 
     /**
@@ -181,6 +249,71 @@ class StudentController extends Controller
         }
     }
 
+    //store new course bookmark
+    public function storeBookmarkCourse(Request $request) 
+    {
+        if (!$request->student_id || !$request->course_id) {
+            return response()->json(["code"=>400, "message"=>"invalidInput"], 400);
+        }
+
+        $student = Student::find($request->student_id);
+
+        if (!$student) {
+            return response()->json(["code"=>422, "message"=>"student not found"], 422);
+        }
+
+        $coursesBookmark = json_decode($student->course_bookmark);
+        $newBookmark = [];
+        $isExist = false;
+
+        foreach ($coursesBookmark as $item) {
+            if ($item == $request->course_id) {
+                $isExist = true;
+            } else {
+                array_push($newBookmark, (int)$item);
+            }
+        }
+
+        if (!$isExist) {
+            array_push($newBookmark, (int)$request->course_id);
+        }
+
+        $student->course_bookmark = json_encode($newBookmark);
+
+        try {
+            $student->save();
+            $student->friends = json_decode($student->friends);
+            $student->friends_requested = json_decode($student->friends_requested);
+            $student->course_bookmark = json_decode($student->course_bookmark);
+            return response()->json(["code"=>200, "message"=>"store bookmark course success", "data"=>$student], 200);
+        } catch(\Exception $exception) {
+            return response()->json(["code"=>500, "message"=>"systems error"], 500);
+        }
+
+    }
+
+    //get all bookmark course of student
+    public function getBookmarkCourse($studentId) {
+        $student = Student::find($studentId);
+
+        if (!$student) {
+            return response()->json(["code"=>422, "message"=>"studetn not found"], 422);
+        }
+
+        $coursesBookmark = json_decode($student->course_bookmark);
+        $result = [];
+
+        foreach ($coursesBookmark as $item) {
+            $course = Course::find($item);
+
+            if ($course) {
+                array_push($result, $course);
+            }
+        }
+
+        return response()->json(["code"=>200, "message"=>"get bookmark course success", "data_array"=>$result], 200);
+    }
+
     /**
      * Function get information of self student
      *  Param: id
@@ -222,7 +355,7 @@ class StudentController extends Controller
         }
 
         $result = [];
-        $result["student_id"] = $idStudent;
+        $result["id"] = $idStudent;
         $result["name"] = $student->name;
         $result["avatar"] = $student->avatar;
         return $result;
@@ -264,6 +397,9 @@ class StudentController extends Controller
 
         $result = [];
         $result["active"] = true;
+        $student->friends = json_decode($student->friends);
+        $student->friends_requested = json_decode($student->friends_requested);
+        $student->course_bookmark = json_decode($student->course_bookmark);
         $result["student"] = $student;
         return response()->json(["code"=>200, "data"=>$result], 200);
     }
@@ -305,6 +441,23 @@ class StudentController extends Controller
                                  "isFriend"=>$isFriend], 200);
     }    
 
+    // get list friends of student 
+    public function getFriends($friendsId)
+    {
+        $response = [];
+        $friends = json_decode($friendsId);
+
+        foreach ($friends as $item) {
+            $student = $this->getBriefStudent($item);
+
+            if ($student) {
+                array_push($response, $student);
+            }
+        }
+
+        return response()->json(["code"=>200, "message"=>"get firends success", "data_array"=>$response], 200);
+    } 
+
     /**
      * Function login for student
      *  Param: username and password
@@ -314,30 +467,50 @@ class StudentController extends Controller
     public function loginStudent(Request $request)
     {
         if (!$request->email && !$request->password) {
-            return response()->json(["message"=>401,
-                                        "data"=>null], 401);
+            return response()->json(["code"=>401, "message"=> "invalid input", "data"=>null], 401);
         }
 
-        $checkLogin = Student::where('email',$request->email)
+        $student = Student::where('email',$request->email)
             ->where('password',$request->password)->first();
         
-        if (!$checkLogin) { 
-            return response()->json(["message"=>403], 403);
+        if (!$student) { 
+            return response()->json(["code"=>422, "message"=>"studentnot found", "data"=>null], 422);
         }
 
         // Login success encode start time and id student
         $carbonNow = Carbon::now();
-        $remember_token = md5($checkLogin->id."_".$carbonNow);
+        $remember_token = md5($student->id."_".$carbonNow);
 
         if ($remember_token) {
-            $studentRemember = Student::find($checkLogin->id);
-            $studentRemember->remember_token = $remember_token;
-            $studentRemember->save();
+            $student->remember_token = $remember_token;
+            $student->save();
             $result = [];
+            $student->friends = json_decode($student->friends);
+            $student->friends_requested = json_decode($student->friends_requested);
+            $student->course_bookmark = json_decode($student->course_bookmark);
             $result["token"] = $remember_token;
-            return response()->json(["code"=>200,
-                                        "data"=>$result], 200);
+            $result["student"] = $student;
+            return response()->json(["code"=>200, "message"=>"login success","data"=>$result], 200);
         }
         return response()->json(["message"=>"System erros"], 500);
+    }
+
+    // logout for student 
+    public function logoutStudent($studentId) 
+    {
+        $student = Student::find($studentId);
+
+        if (!$student) {
+            return response()->json(["code"=>422, "message"=>"student not found", "data"=>null], 422);
+        }
+
+        $student->remember_token = null;
+
+        try {
+            $student->save();
+            return response()->json(["code"=>200, "message"=>"logout success", "data"=>null], 200);
+        } catch (\Exception $exception) {
+            return response()->json(["code"=>500, "message"=>"Systems BD errors"], 500);
+        }
     }
 }

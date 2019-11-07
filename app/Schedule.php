@@ -11,7 +11,10 @@ class Schedule extends Model
     protected $fillable = [
         "id",
         "student_id",
-        "lessons",
+        "course_id",
+        "time_remind",
+        "completion",
+        "status",
         "created_at",
         "updated_at"
     ];

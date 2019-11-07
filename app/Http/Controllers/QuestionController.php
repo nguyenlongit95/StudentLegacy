@@ -21,12 +21,14 @@ class QuestionController extends Controller
     protected $studentController;
     protected $commentController;
     protected $statisticController;
+    protected $branchController;
 
     public function __construct(StudentController $studentController, CommentController $commentController, 
-        StatisticController $statisticController) {
+        StatisticController $statisticController, BranchController $branchCon) {
         $this->studentController = $studentController;
         $this->commentController = $commentController;
         $this->statisticController = $statisticController;
+        $this->branchController = $branchCon;
     }
 
     /**
@@ -38,13 +40,13 @@ class QuestionController extends Controller
     public function store(Request $request)
     {
         if (!$request->owner_id || !$request->hash_tag || !$request->content) {
-            return response()->json(["message"=> "Please enter all input"], 400);
+            return 400;
         }
 
         $student = Student::find($request->owner_id);
 
         if (!$student) {
-            return response()->json(["message"=>"Student not found"], 422);
+            return 422;
         }
         // create new blog to insert into DB
         $question = new Question;
@@ -61,14 +63,9 @@ class QuestionController extends Controller
         $question->content = $request->content;
 
         if (!$request->images_enclose) {
-            return "no image";
             $question->images_enclose = "[]";
         } else {
             $images = $request->images_enclose;
-            // $name = $file->getClientOriginalName();
-            // $path = "localhost/StudentLegacy/public/upload/Question/$name";
-            // $newFile = $file->move('upload/Blogs', $file->getClientOriginalName());
-            // return "hihi";
             $imagesPath = [];
             foreach ($images as $file) {
                 $name = $file->getClientOriginalName();
@@ -113,8 +110,7 @@ class QuestionController extends Controller
             $question->save();
             //save into statistic
             $this->statisticController->saveIntoStatistic("question_post", $request->owner_id, 1);
-            return response()->json(["code"=>200,
-                                     "data"=>null], 200);
+            return 200;
         } catch (\Exception $exception) {
             return response()->json(["message"=>"DB Errors"], 500);
         }
@@ -163,7 +159,31 @@ class QuestionController extends Controller
         }
     }
 
-    
+     /**
+     * Store a new comment question
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */ 
+    public function storeComment($idPost, $idComment) 
+    {
+        $question = Question::find($idPost);
+
+        if (!$question) {
+            return 422;
+        }
+
+        $comments = json_decode($question->comments);
+        array_push($comments, $idComment);
+        $question->comments = json_encode($comments);
+        try {
+            $question->save();
+            return 200;
+        } catch(\Exception $exception) {
+            return 500;
+        }
+    }
+
     /**
      * get all blog from DB
      *
@@ -172,7 +192,7 @@ class QuestionController extends Controller
      */
     public function getAllQuestion($idStudent) 
     {
-        $questions = Question::paginate(10);
+        $questions = Question::where('status', 'public')->paginate(3);
 
         $response = [];
 
@@ -221,6 +241,63 @@ class QuestionController extends Controller
         // $collection = $response;
         // $res = $this->paginate($collection, $perPage = 5, $page = null, $options = []);
         return response()->json(["code"=>200,"data_array"=>$response], 200);
+    }
+
+    //get question by hashtag
+    public function getQuestionByhashtag($idStudent, $hashtag) 
+    {
+        $questions = Question::get();
+
+        $response = [];
+
+        foreach ($questions as $item) {
+            $check = $this->branchController->checkSameBranch($hashtag, $item->hash_tag);
+            if ($check) {
+                $temp = [];
+                $temp["id"] = $item->id;
+                $temp["owner_id"] = $item->owner_id;
+
+                //get info of owner blog
+                $student = Student::find($item->owner_id);
+
+                if ($student) {
+                    $studentResponse = [];
+                    $studentResponse["id"] = $student->id;
+                    $studentResponse["name"] = $student->name;
+                    $studentResponse["avatar"] = $student->avatar;
+                    $temp["student"] = $studentResponse;
+                    $friendsTagReponse = [];
+                    $friendsTag = json_decode($item->friends_tag);
+                    
+                    foreach ($friendsTag as $value) {
+                        $studentTag = Student::find($value);
+                        if ($studentTag) {
+                            $tempTag = [];
+                            $tempTag["id"] = $studentTag->id;
+                            $tempTag["name"] = $studentTag->name;
+                            array_push($friendsTagReponse, $tempTag);
+                        }
+                    }
+            
+                    $temp["friends_tag"] = $friendsTagReponse;
+                    $temp["created_at"] = $item->created_at->toDateTimeString();
+                    $temp["updated_at"] = $item->updated_at->toDateTimeString();
+                    $temp["content"] = $item->content;
+                    $temp["images_enclose"] = json_decode($item->images_enclose);
+                    $temp["files_enclose"] = json_decode($item->files_enclose);
+                    $temp["number_liked"] = count(json_decode($item->liked));
+                    $temp["number_comments"] = count(json_decode($item->comments));
+                    $listLiked = json_decode($item->liked);
+                    $isLiked = in_array($idStudent, $listLiked);
+                    $temp["is_liked"] = $isLiked;
+                    array_push($response, $temp);
+                }
+            }
+        }
+
+        // $collection = $response;
+        // $res = $this->paginate($collection, $perPage = 5, $page = null, $options = []);
+        return $response;
     }
 
     /**
@@ -287,13 +364,13 @@ class QuestionController extends Controller
         //get list liked
         $likedResponse = [];
         $liked = json_decode($question->liked);
-
+        $response["is_liked"] = in_array($idStudent, $liked);
         foreach ($liked as $item) {
             $studentLiked = Student::find($item);
             if ($studentLiked) {
                 $temp = [];
-                $temp["id"] = $studentTag->id;
-                $temp["name"] = $studentTag->name;
+                $temp["id"] = $studentLiked->id;
+                $temp["name"] = $studentLiked->name;
                 array_push($likedResponse, $temp);
             }
         }
