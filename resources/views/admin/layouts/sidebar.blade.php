@@ -47,6 +47,8 @@
                 <ul class="treeview-menu">
                     <li><a href="admin/Categories/CategoriesBlog"><i class="fa fa-bars"></i> Categories Blogs</a></li>
                     <li><a href="admin/Blog/Blogs"><i class="fa fa-file"></i> Blogs</a></li>
+                    <li><a href="admin/Post/Posts"><i class="fa fa-file"></i> Post</a></li>
+                    <li><a href="admin/Course/Courses"><i class="fa fa-file"></i>Course</a></li>
                     <li><a href="admin/User/Users"><i class="fa fa-users"></i> Users</a></li>
                     <li><a href="admin/RoleAndPermission/RoleAndPermission"><i class="fa fa-user-circle"></i> Roles and Permissions</a></li>
                 </ul>

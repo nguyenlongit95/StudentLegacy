@@ -7,6 +7,7 @@ use App\http\controllers\StudentController;
 use App\http\controllers\CommentController;
 use App\http\controllers\StatisticController;
 use App\http\controllers\BranchController;
+use App\http\controllers\CourseController;
 use App\Post;
 use App\Student;
 use Carbon\Carbon;
@@ -17,13 +18,29 @@ class PostController extends Controller
     protected $commentController;
     protected $statisticController;
     protected $branchController;
+    protected $courseController;
 
     public function __construct(StudentController $studentController, CommentController $commentController, 
-        StatisticController $statisticController, BranchController $branchCon) {
+        StatisticController $statisticController, BranchController $branchCon, CourseController $courseCon) {
         $this->studentController = $studentController;
         $this->commentController = $commentController;
         $this->statisticController = $statisticController;
         $this->branchController = $branchCon;
+        $this->courseController = $courseCon;
+    }
+
+    public function index(){
+        $posts = Post::orderBy('created_at', 'DEC')->where('status', '!=', 3)->where('status', '!=', 4)->paginate(10);
+        foreach ($posts as $post) {
+            if ($post->type == 2) {
+                $post->type = "Blog";
+            } else if ($post->type == 3) {
+                $post->type = "Review";
+            } else {
+                $post->type = "Question";
+            }
+        }
+        return view('admin.Post.index', ['Post'=>$posts]);
     }
 
     //store new post
@@ -113,6 +130,11 @@ class PostController extends Controller
             if ($branch != - 1) {
                 $this->statisticController->saveIntoStatistic($dataStatistic, $post->owner_id, $branch);
             }
+
+            if ($request->post_id) { 
+                $this->courseController->addReviewToCourse($request->post_id, $post->id);
+            }
+            
             return response()->json(["code"=>200, "message"=>"post a new post success", "data"=>null], 200);
         } catch (\Exception $exception) {
             return response()->json(["message"=>"DB Errors"], 500);
@@ -263,6 +285,46 @@ class PostController extends Controller
         } catch (\Exception $exception) {
             return response()->json(["code"=>500, "message"=>"systems error", "error"=>$exception], 500);
         }
+    }
+
+    //update status to public: 3 of post
+    public function publicPost($id) 
+    {
+        $post = Post::find($id);
+
+        if (!$post) {
+            return redirect('admin/Post/Posts')->with('thong_bao','Không tồn tại bài đăng này');
+        }
+
+        $post->status = 3;
+
+        try {
+            $post->save();
+            return redirect('admin/Post/Posts')->with('thong_bao','Đã duyệt bài đăng thành công');
+        } catch(\Exception $exception) {
+            return redirect('admin/Post/Posts')->with('thong_bao','Đã xảy ra lỗi với cơ sở dữ liệu');
+        }
+        
+    }
+
+    //update status to public: 3 of post
+    public function rejectPost($id) 
+    {
+        $post = Post::find($id);
+
+        if (!$post) {
+            return redirect('admin/Post/Posts')->with('thong_bao','Không tồn tại bài đăng này');
+        }
+
+        $post->status = 4;
+
+        try {
+            $post->save();
+            return redirect('admin/Post/Posts')->with('thong_bao','Đã reject bai đăng thành công');
+        } catch(\Exception $exception) {
+            return redirect('admin/Post/Posts')->with('thong_bao','Đã xảy ra lỗi với cơ sở dữ liệu');
+        }
+        
     }
 
     /**
@@ -546,6 +608,69 @@ class PostController extends Controller
         // $collection = $response;
         // $res = $this->paginate($collection, $perPage = 5, $page = null, $options = []);
         return response()->json(["code"=>200,"data_array"=>$response], 200);
+    }
+
+    //get post by Id
+    public function getPostsOfCourse($idCourse, $idStudent) 
+    {
+        $course = $this->courseController->getCourseById($idCourse);
+
+        $listId = json_decode($course->reviews);
+        $response = [];
+
+        foreach ($listId as $idPost) {
+            $item = Post::find($idPost);
+            
+            if ($item) {
+                $temp = [];
+                $temp["id"] = $item->id;
+                $temp["type"] = $item->type;
+                $temp["owner_id"] = $item->owner_id;
+
+                //get info of owner blog
+                $student = Student::find($item->owner_id);
+
+                if ($student) {
+                    $studentResponse = [];
+                    $studentResponse["id"] = $student->id;
+                    $studentResponse["name"] = $student->name;
+                    $studentResponse["avatar"] = $student->avatar;
+                    $temp["student"] = $studentResponse;
+                    $friendsTagReponse = [];
+                    $friendsTag = json_decode($item->friends_tag);
+                    
+                    foreach ($friendsTag as $value) {
+                        $studentTag = Student::find($value);
+                        if ($studentTag) {
+                            $tempTag = [];
+                            $tempTag["id"] = $studentTag->id;
+                            $tempTag["name"] = $studentTag->name;
+                            array_push($friendsTagReponse, $tempTag);
+                        }
+                    }
+            
+                    $temp["friends_tag"] = $friendsTagReponse;
+                    $temp["created_at"] = $item->created_at->toDateTimeString();
+                    $temp["updated_at"] = $item->updated_at->toDateTimeString();
+                    $temp["title"] = $item->title;
+                    $temp["content"] = $item->content;
+                    $temp["images_enclose"] = json_decode($item->images_enclose);
+                    $temp["files_enclose"] = json_decode($item->files_enclose);
+
+                    $temp["rates"] = $this->getRateForPost(json_decode($item->rates));
+
+                    $temp["number_liked"] = count(json_decode($item->likes));
+                    $temp["number_comments"] = count(json_decode($item->comments));
+                    $listLiked = json_decode($item->likes);
+                    $isLiked = in_array($idStudent, $listLiked);
+                    $temp["is_liked"] = $isLiked;
+                    array_push($response, $temp);
+                }
+            }
+        }
+        // $collection = $response;
+        // $res = $this->paginate($collection, $perPage = 5, $page = null, $options = []);
+        return response()->json(["code"=>200, "message"=>"get review of course success","data_array"=>$response], 200);
     }
 
     //get rates for post

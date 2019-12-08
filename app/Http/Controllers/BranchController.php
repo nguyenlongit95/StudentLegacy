@@ -23,6 +23,13 @@ class BranchController extends Controller
         return -1;
     }
 
+    // get branch
+    public function getBranch($id) {
+        $branch = Branch::find($id);
+
+        return $branch;
+    }
+
     public function checkSameBranch($hash1, $hash2) {
         $id1 = $this->getIdBranchBy($hash1);
         $id2 = $this->getIdBranchBy($hash2);
@@ -32,5 +39,13 @@ class BranchController extends Controller
         }
 
         return true;
+    }
+
+    //get all branch in area 
+    public function getBranchInArea($idArea)
+    {
+        $branches = Branch::where("area_id", $idArea)->get();
+
+        return $branches;
     }
 }

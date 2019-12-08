@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\http\controllers\BranchController;
 use App\http\controllers\LessionController;
 use App\Course;
+use Carbon\Carbon;
 
 class CourseController extends Controller
 {
@@ -17,10 +18,59 @@ class CourseController extends Controller
         $this->lessionController = $lessionCon;
     }
 
+    // get course to show in  UI
+    public function index(){
+        $courses = Course::orderBy('created_at', 'DEC')->paginate(10);
+        
+        return view('admin.Course.index', ['Course'=>$courses]);
+    }
+
+    //store new course
+    public function createCourse (Request $request) 
+    {
+        // dd($request->name);
+        if (!$request->name || !$request->fee || !$request->time_limit || 
+        !$request->description || !$request->purpose ) {
+            return redirect('admin/Course/createCourse')->with('Thong bao', 'Hay dien dur thong tin');
+        }
+
+        $course = new Course;
+        $course->name = $request->name;
+        $course->avatar = null;
+        $course->purpose = $request->purpose;
+        $course->description = "hihihihi";
+        $course->fee = $request->fee;
+        $course->time_limit = (int)$request->time_limit;
+        $course->lessions_id = "[]";
+        $course->total_student = 0;
+        $course->branch_id = "[]";
+        $course->reviews = "[]";
+        $course->rates = "[]";
+        $course->student_register = "[]";
+        $course->created_at = Carbon::now();
+        $course->updated_at = Carbon::now();
+        // dd($course);
+        try {
+            $course->save();
+            $courses = Course::orderBy('created_at', 'DEC')->paginate(10);
+            return view('admin.Course.index', ['Course'=>$courses]);
+        } catch(\Exception $exception) {
+            dd($exception);
+            return redirect('admin/Course/createCourse')->with('Thong bao', 'Hay dien dur thong tin');
+        }
+    }
+
+    //get all course
     public function getAllCourse()
     {
         $courses = Course::orderBy('created_at', 'DEC')->get();
         return response()->json(["code"=>200, "data_array"=>$courses], 200);
+    }
+
+    // get view for create course
+    public function getCreateCourse()
+    {
+        return view('admin.Course.create');
     }
 
     // get course by tag - search course
@@ -135,5 +185,28 @@ class CourseController extends Controller
         }
 
         return count(json_decode($course->lessions_id));
+    }
+
+    //update course when insert review
+    public function addReviewToCourse($idCourse, $idPost) 
+    {
+        $course = Course::find($idCourse);
+
+        if (!$course) {
+            return false;
+        }
+
+        $reviews = json_decode($course->reviews);
+
+        if (!in_array($idPost, $reviews)) {
+            array_push($reviews, $idPost);
+        }
+
+        try {
+            $course->save();
+            return true;
+        } catch (\Exception $exception) {
+            return false;
+        }
     }
 }

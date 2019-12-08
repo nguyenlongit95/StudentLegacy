@@ -58,16 +58,26 @@ Route::group(['prefix'=>'v1'], function () {
     Route::post('schedule-update-completion', 'ScheduleController@updateCompletionSchedule');
     Route::post('schedule-update-status', 'ScheduleController@updateStatusSchedule');
     Route::get('courses-bookmark-get/{studentId}', 'StudentController@getBookmarkCourse');
+    Route::get('courses-reviews/{idCourse}, {idStudent}', 'PostController@getPostsOfCourse');
+    
     //A05 - Schedule
     Route::get('schedule/{idStudent},{time}', 'ScheduleController@getScheduleBy');
     Route::post('schedule-post', 'ScheduleController@storeNewSchedule');
     Route::get('schedule-get/{studentId}', 'ScheduleController@getScheduleByIdStudent');
     Route::post('schedule-update', 'ScheduleController@updateSchedule');
+
+    
+    Route::get('achievement-get-evaluate/{studentId}', 'StudentBranchController@getEvaluateAbilityByBranch');
     //A06 - Setting
     Route::get('settings/{id}', 'StudentController@getInfoStudent');
+    Route::post('student-logout/{studentId}', 'StudentController@logoutStudent');
     Route::get('profile-mypost-get/{idOwner},{idStudent}', 'PostController@getPostOfStudent');
+    Route::get('profile-friend-get/{idFriend}, {idStudent}', 'StudentController@getInfoFriend');
     //Result statistic
     Route::get('result-statistic-get/{idStudent}', 'ResultStatisticController@getResult');
+
+    // Area, Branch
+    Route::get('area-get', 'AreaController@getAllArea');
 
     // Blog, comment
     Route::get('detail-post/{idStudent},{idBlog}', 'BlogController@getDetailBlog');

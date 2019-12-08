@@ -410,53 +410,34 @@ class StudentController extends Controller
      *
      * @return id, username, avatar, mail, gender, description
      */
-    public function getInfoFriend($idStudent, $idFriend)
+    public function getInfoFriend($idFriend, $idStudent)
     {
-        if (!$idStudent || !$idFriend) {
-            return response()->json(["message"=>"Please enter all input"], 400);
-        }
-
         $student = Student::find($idStudent);
 
         if (!$student) {
-            return response()->json(["message"=>"student not found"], 422);
+            return response()->json(["code"=> 422, "message"=>"student not found"], 422);
         }
 
-        $friendSearch = Student::find($idFriend);
+        $friend = Student::find($idFriend);
 
-        if (!$friendSearch) {
-            return response()->json(["message"=>"Friend not found"], 422);
+        if (!$friend) {
+            return response()->json(["code"=>422, "message"=>"Friend not found"], 422);
         }
 
         //Check relationship
         $friends = json_decode($student->friends, true);
         $isFriend = in_array(["id"=>$idFriend], $friends);
-                
-        return response()->json(["id"=>$student->id,
-                                 "username"=>$student->username,
-                                 "avatar"=>$student->avatar,
-                                 "mail"=>$student->email,
-                                 "gender"=>$student->gender,
-                                 "description"=>$student->description,
-                                 "isFriend"=>$isFriend], 200);
+        $result = [];
+        $result["id"] = $friend->id;
+        $result["avatar"] = $friend->avatar;
+        $result["name"] = $friend->name;
+        $result["email"] = $friend->email;
+        $result["phone"] = $friend->phone;
+        $result["gender"] = $friend->gender;
+        $result["date_of_birth"] = $friend->date_of_birth;
+
+        return response()->json(["code"=>200, "message"=>"get info friend success", "data"=>$result], 200);
     }    
-
-    // get list friends of student 
-    public function getFriends($friendsId)
-    {
-        $response = [];
-        $friends = json_decode($friendsId);
-
-        foreach ($friends as $item) {
-            $student = $this->getBriefStudent($item);
-
-            if ($student) {
-                array_push($response, $student);
-            }
-        }
-
-        return response()->json(["code"=>200, "message"=>"get firends success", "data_array"=>$response], 200);
-    } 
 
     /**
      * Function login for student

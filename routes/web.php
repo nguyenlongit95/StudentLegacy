@@ -90,6 +90,20 @@ Route::group(['prefix'=>'admin','middleware' => ['auth','role:BACKEND']],functio
         Route::post('updateRattings/{id}','RattingController@update');
     });
 
+    Route::group(['prefix'=>'Post'],function(){
+        Route::get('Posts','PostController@index');
+        Route::get('publicPost/{id}', 'PostController@publicPost');
+        Route::get('rejectPost/{id}', 'PostController@rejectPost');
+    });
+
+    Route::group(['prefix'=>'Course'],function(){
+        Route::get('Courses','CourseController@index');
+        Route::get('updateCourse/{id}', 'CourseController@updateCourse');
+        Route::get('deleteCourse/{id}', 'CourseController@deleteCourse');
+        Route::get('createCourse', 'CourseController@getCreateCourse');
+        Route::post('createCourse', 'CourseController@createCourse');
+    });
+
     Route::group(['prefix'=>'Blog'],function(){
         Route::get('Blogs','BlogsController@index');
 
