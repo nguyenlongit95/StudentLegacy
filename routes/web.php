@@ -98,7 +98,8 @@ Route::group(['prefix'=>'admin','middleware' => ['auth','role:BACKEND']],functio
 
     Route::group(['prefix'=>'Course'],function(){
         Route::get('Courses','CourseController@index');
-        Route::get('updateCourse/{id}', 'CourseController@updateCourse');
+        Route::get('getupdateCourse/{id}', 'CourseController@getupdateCourse');
+        Route::post('updateCourse/{id}', 'CourseController@updateCourse');
         Route::get('deleteCourse/{id}', 'CourseController@deleteCourse');
         Route::get('createCourse', 'CourseController@getCreateCourse');
         Route::post('createCourse', 'CourseController@createCourse');

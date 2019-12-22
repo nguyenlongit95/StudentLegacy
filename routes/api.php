@@ -60,6 +60,8 @@ Route::group(['prefix'=>'v1'], function () {
     Route::get('courses-bookmark-get/{studentId}', 'StudentController@getBookmarkCourse');
     Route::get('courses-reviews/{idCourse}, {idStudent}', 'PostController@getPostsOfCourse');
     
+    Route::get('test-course/{idCourse}, {idPost}', 'CourseController@addReviewToCourse');
+
     //A05 - Schedule
     Route::get('schedule/{idStudent},{time}', 'ScheduleController@getScheduleBy');
     Route::post('schedule-post', 'ScheduleController@storeNewSchedule');

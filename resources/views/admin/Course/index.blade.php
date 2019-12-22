@@ -48,7 +48,7 @@
                             <td>
                                 {{ $course->time_limit}}
                             </td>
-                            <td class="text-center"><a href="admin/Course/updateCourse/{{$course->id}}" class="btn-warning padding510510">Update</a></td>
+                            <td class="text-center"><a href="admin/Course/getupdateCourse/{{$course->id}}" class="btn-warning padding510510">Update</a></td>
                             <td class="text-center"><a href="admin/Course/deleteCourse/{{$course->id}}" class="btn-danger padding510510">Delete</a></td>
                         </tr>
                         @endforeach

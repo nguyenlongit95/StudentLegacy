@@ -38,7 +38,7 @@ class CourseController extends Controller
         $course->name = $request->name;
         $course->avatar = null;
         $course->purpose = $request->purpose;
-        $course->description = "hihihihi";
+        $course->description = $request->description;
         $course->fee = $request->fee;
         $course->time_limit = (int)$request->time_limit;
         $course->lessions_id = "[]";
@@ -59,6 +59,30 @@ class CourseController extends Controller
             return redirect('admin/Course/createCourse')->with('Thong bao', 'Hay dien dur thong tin');
         }
     }
+
+    public function updateCourse(Request $request, $idCourse) 
+    {
+        $course = Course::find($idCourse);
+        if (!$course) {
+            return redirect('admin/Course/Courses')->with('Thong bao', 'Khong tim thay thong tin lop hoc');
+        }
+        $course->name = $request->name;
+        $course->purpose = $request->purpose;
+        $course->description = utf8_decode($request->description);
+        $course->fee = $request->fee;
+        $course->time_limit = (int)$request->time_limit;
+
+        try {
+            $course->save();
+            $courses = Course::orderBy('created_at', 'DEC')->paginate(10);
+            return view('admin.Course.index', ['Course'=>$courses]);
+        } catch(\Exception $exception) {
+            dd($exception);
+            return redirect('admin/Course/getUpdateCourse')->with('Thong bao', 'Hay dien dur thong tin');
+        }
+    }
+
+
 
     //get all course
     public function getAllCourse()
@@ -197,10 +221,8 @@ class CourseController extends Controller
         }
 
         $reviews = json_decode($course->reviews);
-
-        if (!in_array($idPost, $reviews)) {
-            array_push($reviews, $idPost);
-        }
+        array_push($reviews, (int)$idPost);
+        $course->reviews = json_encode($reviews);
 
         try {
             $course->save();
@@ -208,5 +230,16 @@ class CourseController extends Controller
         } catch (\Exception $exception) {
             return false;
         }
+    }
+
+    //updateCourse
+    public function getupdateCourse($idCourse)
+    {
+        $course = Course::find($idCourse);
+
+        if (!$course) {
+            return view('admin.Course.update') -> with('Thong bao', 'Khong ton tai khoa hoc');
+        }
+        return view('admin.Course.update', ['Course'=>$course]);
     }
 }

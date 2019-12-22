@@ -131,8 +131,8 @@ class PostController extends Controller
                 $this->statisticController->saveIntoStatistic($dataStatistic, $post->owner_id, $branch);
             }
 
-            if ($request->post_id) { 
-                $this->courseController->addReviewToCourse($request->post_id, $post->id);
+            if ($request->course_id) {
+                $this->courseController->addReviewToCourse($request->course_id, $post->id);
             }
             
             return response()->json(["code"=>200, "message"=>"post a new post success", "data"=>null], 200);
@@ -619,7 +619,7 @@ class PostController extends Controller
         $response = [];
 
         foreach ($listId as $idPost) {
-            $item = Post::find($idPost);
+            $item = Post::where('status', 3)->where('id', $idPost)->first();
             
             if ($item) {
                 $temp = [];
