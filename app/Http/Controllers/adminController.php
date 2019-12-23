@@ -12,7 +12,7 @@ class adminController extends Controller
      * widget sẽ được hiểu là các thành phần phụ của website
      * */
     public function DashBoard(){
-        return view('admin.index');
+        return view('admin.main');
     }
 
     public function createCart(){
