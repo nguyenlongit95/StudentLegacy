@@ -37,7 +37,7 @@
                                 {{ $course->name }}
                             </td>
                             <td>
-                                {{ $course->description }}}
+                                {{ $course->description }}
                             </td>
                             <td>
                                 {{ $course->purpose}}

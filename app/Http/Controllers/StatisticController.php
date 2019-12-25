@@ -4,17 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Statistic;
+use App\http\controllers\BranchController;
 
 class StatisticController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        //
+    protected $branchController;
+
+    public function __construct(BranchController $branchCon) {
+        $this->branchController = $branchCon;
     }
 
     /**
@@ -49,46 +46,7 @@ class StatisticController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
-
-    /**
-     * Store a new Statistic
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */ 
+     
     public function storeStatistic($idStudent, $idBranch) 
     {
         $statistic = new Statistic;
@@ -225,5 +183,35 @@ class StatisticController extends Controller
         } catch (\Exception $exception) {
             return response()->json(["message"=>"DB Errors"], 500);
         } 
+    }
+
+    public function getEvaluateOfStudent($idStudent)
+    {
+        $statistics = Statistic::where('student_id', $idStudent)->get();
+
+        $response = [];
+        foreach ($statistics as $item) {
+            $result = [];
+            $result["branch_id"] = $item->branch_id;
+            $branch = $this->branchController->getBranch($item->branch_id);
+            $result["branch"] = $branch;
+            $result["ratio"] = (int)$item->number_question_post * 2.1
+                                + (int)$item->number_question_seen * 1.2
+                                + (int)$item->number_question_like * 1.1
+                                + (int)$item->number_question_rate * 1.4
+                                + (int)$item->number_blog_post * 2.2
+                                + (int)$item->number_blog_seen * 1.3
+                                + (int)$item->number_blog_like * 1.1
+                                + (int)$item->number_blog_rate * 1.3
+                                + (int)$item->number_review_post * 2
+                                + (int)$item->number_review_seen * 1.2
+                                + (int)$item->number_review_like * 1
+                                + (int)$item->number_review_rate * 1.4
+                                + (int)$item->number_search * 1.3
+                                + (int)$item->number_time_study * 2;
+            
+            array_push($response, $result);
+        }
+        return response()->json([ "code"=> 200, "data_array"=> $response], 200);
     }
 }

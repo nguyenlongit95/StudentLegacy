@@ -75,9 +75,10 @@ Route::group(['prefix'=>'v1'], function () {
     Route::post('student-logout/{studentId}', 'StudentController@logoutStudent');
     Route::get('profile-mypost-get/{idOwner},{idStudent}', 'PostController@getPostOfStudent');
     Route::get('profile-friend-get/{idFriend}, {idStudent}', 'StudentController@getInfoFriend');
+   
     //Result statistic
     Route::get('result-statistic-get/{idStudent}', 'ResultStatisticController@getResult');
-
+    Route::get('statistic-get/{idStudent}', 'StatisticController@getEvaluateOfStudent');
     // Area, Branch
     Route::get('area-get', 'AreaController@getAllArea');
 
